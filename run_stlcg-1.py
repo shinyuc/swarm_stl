@@ -1,10 +1,10 @@
 import sys
 import numpy as np
 
-# from PWLPlan import plan, Node
-# from vis import vis
+from pwl_plan import plan, Node
+from safe_cons_v1 import *
 
-def test():
+def test(swarm):
     x0 = [-1., -1]
 
     wall_half_width = 0.05
@@ -57,9 +57,19 @@ def test():
     x0s = [x0,]
     specs = [spec,]
     goals = [goal, ]
-    PWL = plan(x0s, specs, bloat=0.05, size=0.11/2, num_segs=9, tmax=tmax, vmax=vmax, hard_goals=goals)
+    PWL = plan(swarm, x0s, specs, bloat=0.05, size=0.11/2, num_segs=9, tmax=tmax, vmax=vmax, hard_goals=goals)
 
     return x0s, plots, PWL
 
 if __name__ == '__main__':
-    results = vis(test)
+    A = np.array([[0, 0], [0, 0]])
+    B = np.array([[1, 0], [0, 1]])
+    dynamics = [A, B]
+    total_num_agents = [2, 3, 4, 5]
+    print(dynamics[1])
+    print(total_num_agents[0])
+    Q = np.array([[1, 0], [0, 1]])
+    R = np.array([[1, 0], [0, 1]])
+    lqr_set = [Q, R]
+    swarm = SingleSwarm(1, dynamics, total_num_agents, lqr_set)
+    _, plots, PWLs = test(swarm)

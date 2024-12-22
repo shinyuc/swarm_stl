@@ -5,6 +5,17 @@ import time
 import control as ct
 from safe_constraint_func import *
 
+M = 1e3
+# a large M causes numerical issues and make the model infeasible to Gurobi
+T_MIN_SEP = 1e-2
+# see comments in GreaterThanZero
+IntFeasTol  = 1e-1 * T_MIN_SEP / M
+
+def setM(v):
+    global M, IntFeasTol
+    M = v
+    IntFeasTol  = 1e-1 * T_MIN_SEP / M
+
 EPS = 1e-2
 
 def _sub(x1, x2):
@@ -14,14 +25,14 @@ def _add(x1, x2):
     return [x1[i] + x2[i] for i in range(len(x1))]
 
 def L1Norm(model, x):
-    xvar_temp = model.addVars(len(x), lb=-GRB.INFINITY) # add multiple new variables
+    xvar = model.addVars(len(x), lb=-GRB.INFINITY)
     abs_x = model.addVars(len(x))
     model.update()
-    xvar = [xvar_temp[i] for i in range(len(xvar_temp))] # seems like change the structure of xvar to list
+    xvar = [xvar[i] for i in range(len(xvar))]
     abs_x = [abs_x[i] for i in range(len(abs_x))]
     for i in range(len(x)):
         model.addConstr(xvar[i] == x[i])
-        model.addConstr(abs_x[i] == abs(xvar[i]))
+        model.addConstr(abs_x[i] == abs_(xvar[i]))
     return sum(abs_x)
 
 class Conjunction(object):
@@ -54,10 +65,11 @@ def hasIntersection(a, b, c, d):
 
 def always(i, a, b, zphis, PWL):
     # PWL here refers to SEG in our work
-    t_i = PWL[i][1]
+    # i: i-th time step, starting with zero
+    t_i = PWL[i][1] # PWL[i][0] is position, PWL[i][1] is time, PWL[i][2] is A matrix for bounding box
     t_i_1 = PWL[i+1][1]
     conjunctions = []
-    for j in range(len(PWL)-1):
+    for j in range(len(PWL)-1): # for all time interval
         t_j = PWL[j][1]
         t_j_1 = PWL[j+1][1]
         # swarm at j segment should satisfy the phi property
@@ -104,9 +116,8 @@ def until(i, a, b, zphi1s, zphi2s, PWL):
         disjunctions.append(Conjunction(conjunctions))
     return Conjunction([z_intervalWidth, Disjunction(disjunctions)])
 
-def mu(i, swarm_s_i,swarm_s_i_last,swarm_s_i_next, PWL, epsilon_s, F, g):
+def mu(i, PWL, epsilon_s, F, g):
     bloat_factor = np.max([0, epsilon_s])
-    # i: # of the segment
     # this segment is fully contained in Ax<=b (shrinked)
     # need to change
 
@@ -115,11 +126,12 @@ def mu(i, swarm_s_i,swarm_s_i_last,swarm_s_i_next, PWL, epsilon_s, F, g):
     conjunctions = [] # and, all constraints must be satisfied
     for e in range(num_edges):
         a = F[e,:]
-        for j in [i, i+1]:
-            x = PWL[j][0]
-            conjunctions.append(stl_1(swarm_s_i, a, g[e], epsilon=1e-1)) #EPS is for strictly grater than zero
-            conjunctions.append(stl_2(swarm_s_i,swarm_s_i_last, a, g[e],epsilon=1e-1, epsilon_r = 1))
-            conjunctions.append(stl_3(swarm_s_i,swarm_s_i_next, a, g[e],epsilon=1e-1, epsilon_r = 1))
+        x = PWL[i][0]
+        conjunctions.append(stl_1())  # EPS is for strictly grater than zero
+        if i >=1:
+            conjunctions.append(stl_2())
+        if i < len(PWL)-1:
+            conjunctions.append(stl_3())
     return Conjunction(conjunctions)
 
 def negmu(i, swarm_s_i,swarm_s_i_last,swarm_s_i_next, PWL, epsilon_s, F, g):
