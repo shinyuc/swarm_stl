@@ -1,5 +1,6 @@
 import sys
 import numpy as np
+from vis import vis
 
 from pwl_plan import plan, Node
 from safe_cons_v1 import *
@@ -73,3 +74,4 @@ if __name__ == '__main__':
     lqr_set = [Q, R]
     swarm = SingleSwarm(1, dynamics, total_num_agents, lqr_set)
     _, plots, PWLs = test(swarm)
+    results = vis(test, swarm)
