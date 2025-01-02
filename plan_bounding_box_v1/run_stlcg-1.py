@@ -12,10 +12,16 @@ def test(swarm,boxes,num_segs=9):
     A = np.array([[-1, 0], [1, 0], [0, -1], [0, 1]])
     walls = []
 
-    walls.append(np.array([-1.5, -1.5, -1.5, 1.5], dtype = np.float64))
-    walls.append(np.array([1.5, 1.5, -1.5, 1.5], dtype = np.float64))
-    walls.append(np.array([-1.5, 1.5, -1.5, -1.5], dtype = np.float64))
-    walls.append(np.array([-1.5, 1.5, 1.5, 1.5], dtype = np.float64))
+    walls.append(np.array([-1.5, -1.5, -1.5, 1.5], dtype=np.float64))
+    walls.append(np.array([1.5, 1.5, -1.5, 1.5], dtype=np.float64))
+    walls.append(np.array([-1.5, 1.5, -1.5, -1.5], dtype=np.float64))
+    walls.append(np.array([-1.5, 1.5, 1.5, 1.5], dtype=np.float64))
+
+
+    # walls.append(np.array([-10, -10, -10, 10], dtype = np.float64))
+    # walls.append(np.array([10, 10, -10, 10], dtype = np.float64))
+    # walls.append(np.array([-10, 10, -10, -10], dtype = np.float64))
+    # walls.append(np.array([-10, 10, 10, 10], dtype = np.float64))
 
     obs = []
     for wall in walls:
@@ -75,7 +81,7 @@ if __name__ == '__main__':
     lqr_set = [Q, R]
     swarm = SingleSwarm(1, dynamics, total_num_agents, lqr_set)
     # box = [a[k] * x1[k] for i in range(len(x1))])
-    num_segs = 9
+    num_segs = 10
     # Note: Sigma of bounding box = box@box.T
     initial_box = np.array([[0.001, 0], [0, 0.001]])
     boxes = []

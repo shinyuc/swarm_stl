@@ -69,8 +69,8 @@ def stl_waypoints(margin, model, swarm, a,b,x0,x1, Sigma, EPS=1e-1):
     B_p_T = B_p.T
     inv_P = np.linalg.inv(B_p @ B_p.T)
     gamma_5 = math.sqrt(a @ inv_P @ a.T)
-    gamma_5_1 = gamma_5 * (B_p_T @ _sub(x0, x1))
-    result = - sum([a[k] * x1[k] for k in range(len(x1))]) + gamma_4 - L1Norm(model, gamma_5_1)-EPS -margin
+    gamma_5_1 = (B_p_T @ _sub(x0, x1))
+    result = - sum([a[k] * x1[k] for k in range(len(x1))]) + gamma_4 - gamma_5 * L1Norm(model, gamma_5_1)-EPS -margin
     return result
 
 def stl_last(margin, swarm, a, b, x0,Sigma,Sigma_last, EPS=1e-1):

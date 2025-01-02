@@ -138,7 +138,6 @@ def mu(margin, model, swarm, i, PWL, boxes, A, b):
         temp = sc.stl_waypoints(margin,model, swarm, a,b_e,x0,x1,Sigma, EPS)
         conjunctions.append(temp)
         if i >= 1:
-            # x0_last = PWL[i-1][0]
             Sigma_last = boxes[i]
             temp_last = sc.stl_last(margin, swarm, a, b_e, x0, Sigma_last, Sigma, EPS)
             conjunctions.append(temp_last[0])
@@ -162,26 +161,45 @@ def negmu(margin, model, swarm, i, PWL, boxes, A, b):
         x0 = PWL[i][0]
         x1 = PWL[i + 1][0]
         Sigma = boxes[i + 1]
-        temp = sc.neg_stl_waypoints(margin,model, swarm, a,b_e,x0,x1,Sigma, EPS)
-        conjunctions.append(temp)
-        if i >= 1:
-            Sigma_last = boxes[i]
-            temp_last = sc.neg_stl_last(margin, swarm, a, b_e, x0, Sigma_last, Sigma, EPS)
-            conjunctions.append(temp_last[0])
-            conjunctions.append(temp_last[1])
-        if i <= len(PWL)-3:
-            Sigma_next = boxes[i+2]
-            temp_next = sc.neg_stl_next(margin, swarm, a, b_e, x1, Sigma,Sigma_next, EPS)
-            conjunctions.append(temp_next[0])
-            conjunctions.append(temp_next[1])
+        # temp = sc.neg_stl_waypoints(margin,model, swarm, a,b_e,x0,x1,Sigma, EPS)
+        # conjunctions.append(temp)
+        # if i >= 1:
+        #     Sigma_last = boxes[i]
+        #     temp_last = sc.neg_stl_last(margin, swarm, a, b_e, x0, Sigma_last, Sigma, EPS)
+        #     conjunctions.append(temp_last[0])
+        #     conjunctions.append(temp_last[1])
+        # if i <= len(PWL)-3:
+        #     Sigma_next = boxes[i+2]
+        #     temp_next = sc.neg_stl_next(margin, swarm, a, b_e, x1, Sigma,Sigma_next, EPS)
+        #     conjunctions.append(temp_next[0])
+        #     conjunctions.append(temp_next[1])
+        # disjunctions.append(Conjunction(conjunctions))
+
+        bloat_factor = Sigma @ Sigma.T
+        gamma_4 = b - sqrt(a @ bloat_factor @ a.T)
+
+        B_p = swarm.B
+        B_p_T = B_p.T
+        inv_P = np.linalg.inv(B_p @ B_p.T)
+        gamma_5 = sqrt(a @ inv_P @ a.T)
+        gamma_5_1 = (B_p_T @ _sub(x0, x1))
+        temp1 = sum([a[k] * x0[k] for k in range(len(x0))]) - b[e] - sqrt(a @ bloat_factor @ a.T) - EPS - margin
+        temp2 = sum([a[k] * x1[k] for k in range(len(x1))]) - b[e] - sqrt(a @ bloat_factor @ a.T) - EPS - margin
+
+        temp1 = sum([a[k] * x0[k] for k in range(len(x0))]) - b[e]  - sqrt(a @ bloat_factor @ a.T) - gamma_5*L1Norm(model, gamma_5_1) - EPS - margin
+        temp2 = sum([a[k] * x1[k] for k in range(len(x1))]) - b[e]  - sqrt(a @ bloat_factor @ a.T) - gamma_5*L1Norm(model, gamma_5_1) - EPS - margin
+        conjunctions.append(temp1)
+        conjunctions.append(temp2)
         disjunctions.append(Conjunction(conjunctions))
 
-        # bloat_factor = 0.01
-        # temp1 = sum([a[k]*x0[k] for k in range(len(x0))]) - (b[e] + np.linalg.norm(a) * bloat_factor) - EPS -  margin
-        # temp2 =  sum([a[k] * x1[k] for k in range(len(x1))]) - (b[e] + np.linalg.norm(a) * bloat_factor) - EPS-  margin
+        # bloat_factor = 0.001
+        # temp1 = sum([a[k] * x0[k] for k in range(len(x0))]) - b[e] - np.linalg.norm(a) * bloat_factor - EPS -  margin
+        # temp2 =  sum([a[k] * x1[k] for k in range(len(x1))]) - b[e] - np.linalg.norm(a) * bloat_factor - EPS-  margin
         # conjunctions.append(temp1)
         # conjunctions.append(temp2)
         # disjunctions.append(Conjunction(conjunctions))
+
+
 
     return Disjunction(disjunctions)
 
@@ -359,6 +377,7 @@ def plan_waypoints(swarm,boxes, x0s, specs, bloat, limits=None, num_segs=None, t
             m.addConstrs(PWL[0][0][i] == x0[i] for i in range(dims))
             m.addConstr(PWL[0][1] == 0)
 
+
             if hard_goals is not None:
                 goal = hard_goals[idx_a]
                 m.addConstrs(PWL[-1][0][i] == goal[i] for i in range(dims))
@@ -391,6 +410,7 @@ def plan_waypoints(swarm,boxes, x0s, specs, bloat, limits=None, num_segs=None, t
         temp = PWLs[0]
         test1 = temp[0][1]
         test2 = margin
+        # m.addConstr(test2 >= 0)
         # m.setObjective(obj, GRB.MINIMIZE)
         obj1 = LinExpr()
         obj1 += margin
