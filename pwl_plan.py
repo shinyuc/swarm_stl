@@ -123,7 +123,34 @@ def release(i, a, b, zphi1s, zphi2s, PWL):
         conjunctions.append(Disjunction(disjunctions))
     return Conjunction(conjunctions)
 
-def mu(i, swarm, PWL, bloat_factor, A, b):
+# def mu(i, swarm, PWL, bloat_factor, A, b):
+#     bloat_factor = np.max([0, bloat_factor])
+#     # this segment is fully contained in Ax<=b (shrinked)
+#     b = b.reshape(-1)
+#     num_edges = len(b)
+#     conjunctions = []
+#     for e in range(num_edges):
+#         a = A[e,:]
+#         # for j in [i, i+1]:
+#         x0 = PWL[i][0]
+#         x1 = PWL[i+1][0]
+#         # conjunctions.append(b[e] - np.linalg.norm(a) * bloat_factor - sum([a[k]*x[k] for k in range(len(x))]) - EPS)
+#         temp = sc.stl_1(swarm, a,b,x0,x1,e,bloat_factor, EPS)
+#         conjunctions.append(temp[0])
+#         conjunctions.append(temp[1])
+#         conjunctions.append(temp[2])
+#         conjunctions.append(temp[3])
+#         if i >= 1:
+#             x0_last = PWL[i-1][0]
+#             temp_last = sc.stl_last(swarm, a, b, x0, x0_last, e, bloat_factor, EPS)
+#             conjunctions.append(temp_last)
+#         if i <= len(PWL)-2:
+#             x1_next = PWL[i+1][0]
+#             temp_next = sc.stl_next(swarm, a, b, x1, x1_next, e, bloat_factor, EPS)
+#             conjunctions.append(temp_next)
+#     return Conjunction(conjunctions)
+
+def mu(model, i, swarm, PWL, bloat_factor, A, b):
     bloat_factor = np.max([0, bloat_factor])
     # this segment is fully contained in Ax<=b (shrinked)
     b = b.reshape(-1)
@@ -131,23 +158,10 @@ def mu(i, swarm, PWL, bloat_factor, A, b):
     conjunctions = []
     for e in range(num_edges):
         a = A[e,:]
-        # for j in [i, i+1]:
         x0 = PWL[i][0]
-        x1 = PWL[i+1][0]
-        # conjunctions.append(b[e] - np.linalg.norm(a) * bloat_factor - sum([a[k]*x[k] for k in range(len(x))]) - EPS)
-        temp = sc.stl_1(swarm, a,b,x0,x1,e,bloat_factor, EPS)
-        conjunctions.append(temp[0])
-        conjunctions.append(temp[1])
-        conjunctions.append(temp[2])
-        conjunctions.append(temp[3])
-        if i >= 1:
-            x0_last = PWL[i-1][0]
-            temp_last = sc.stl_last(swarm, a, b, x0, x0_last, e, bloat_factor, EPS)
-            conjunctions.append(temp_last)
-        if i <= len(PWL)-2:
-            x1_next = PWL[i+1][0]
-            temp_next = sc.stl_next(swarm, a, b, x1, x1_next, e, bloat_factor, EPS)
-            conjunctions.append(temp_next)
+        x1 = PWL[i + 1][0]
+        temp = sc.stl_v2(model, swarm, a, b, x0, x1, e, bloat_factor, EPS)
+        conjunctions.append(temp)
     return Conjunction(conjunctions)
 
 def negmu(i,swarm, PWL, bloat_factor, A, b):
@@ -248,15 +262,15 @@ def clearSpecTree(spec):
         clearSpecTree(dep)
     spec.zs = []
 
-def handleSpecTree(swarm,spec, PWL, bloat_factor, size):
+def handleSpecTree(model,swarm,spec, PWL, bloat_factor, size):
     for dep in spec.deps:
-        handleSpecTree(swarm, dep, PWL, bloat_factor, size)
+        handleSpecTree(model,swarm, dep, PWL, bloat_factor, size)
     if len(spec.zs) == len(PWL)-1:
         return
     elif len(spec.zs) > 0:
         raise ValueError('incomplete zs')
     if spec.op == 'mu':
-        spec.zs = [mu(i,swarm, PWL, 0.1, spec.info['A'], spec.info['b']) for i in range(len(PWL)-1)]
+        spec.zs = [mu(model, i, swarm, PWL, 0.1, spec.info['A'], spec.info['b']) for i in range(len(PWL)-1)]
     elif spec.op == 'negmu':
         spec.zs = [negmu(i,swarm, PWL, bloat_factor + size, spec.info['A'], spec.info['b']) for i in range(len(PWL)-1)]
     elif spec.op == 'and':
@@ -357,13 +371,13 @@ def plan(swarm, x0s, specs, bloat, limits=None, num_segs=None, tasks=None, vmax=
             add_velocity_constraints(m, PWL, vmax=vmax)
             add_time_constraints(m, PWL, tmax)
 
-            handleSpecTree(swarm, spec, PWL, bloat, size)
+            handleSpecTree(m, swarm, spec, PWL, bloat, size)
             add_CDTree_Constraints(m, spec.zs[0])
 
         if tasks is not None:
             for idx_agent in range(len(tasks)):
                 for idx_task in range(len(tasks[idx_agent])):
-                    handleSpecTree(tasks[idx_agent][idx_task], PWLs[idx_agent], bloat, size)
+                    handleSpecTree(m, tasks[idx_agent][idx_task], PWLs[idx_agent], bloat, size)
 
             conjunctions = []
             for idx_task in range(len(tasks[0])):

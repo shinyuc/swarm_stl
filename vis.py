@@ -11,8 +11,8 @@ import matplotlib.lines as mlines
 import matplotlib.patches as mpatches
 from matplotlib.collections import PatchCollection
 
-def vis(test, swarm, limits=None, equal_aspect=True):
-    _, plots, PWLs = test(swarm)
+def vis(test, swarm,boxes, limits=None, equal_aspect=True):
+    _, plots, PWLs, margin = test(swarm,boxes)
 
     print(PWLs)
     plt.rcParams["figure.figsize"] = [6.4, 6.4]

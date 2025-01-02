@@ -1,7 +1,8 @@
 import numpy as np
 import control as ct
 import math
-
+from gurobipy import *
+# from pwl_plan import *
 # PWL includes waypoint position, time stamp, bounding box A
 # PWLs = [PWL]
 class SingleSwarm:
@@ -13,6 +14,17 @@ class SingleSwarm:
         self.B = cholesky_decomposition_lqr(dynamics, lqr_Q_R)
         # self.bounding_box_A = bounding_box_A
         # self.bounding_box_sigma = np.matmul(bounding_box_A, bounding_box_A.T)
+
+def L1Norm(model, x):
+    xvar = model.addVars(len(x), lb=-GRB.INFINITY)
+    abs_x = model.addVars(len(x))
+    model.update()
+    xvar = [xvar[i] for i in range(len(xvar))]
+    abs_x = [abs_x[i] for i in range(len(abs_x))]
+    for i in range(len(x)):
+        model.addConstr(xvar[i] == x[i])
+        model.addConstr(abs_x[i] == abs_(xvar[i]))
+    return sum(abs_x)
 
 def cholesky_decomposition_lqr(dynamics, lqr_Q_R = (np.eye(2), np.eye(2))):
     A = dynamics[0]
@@ -63,6 +75,18 @@ def stl_1(swarm, a,b,x0,x1,e,bloat_factor, EPS=1e-1):
     result_3 = - sum([a[k] * x1[k] for k in range(len(x1))]) + gamma_4 - gamma_5_3 - EPS
     result_4 = - sum([a[k] * x1[k] for k in range(len(x1))]) + gamma_4 - gamma_5_4 - EPS
     result = [result_1, result_2, result_3, result_4]
+    return result
+
+def stl_v2(model, swarm, a,b,x0,x1,e,bloat_factor, EPS=1e-1):
+    # bloat_factor denotes the margin, which is epsilon in eq(3)
+    Sigma = np.array([[0.001, 0], [0, 0.001]])
+    gamma_4 = b[int(e)] - math.sqrt(a.T @ Sigma @ a)
+    B_p = swarm.B
+    B_p_T = B_p.T
+    inv_P = np.linalg.inv(B_p @ B_p.T)
+    gamma_5 = math.sqrt(a.T @ inv_P @ a)
+    gamma_5_1 = gamma_5 * sum([(x0[k] - x1[k]) for k in range(len(x1))])
+    result = - sum([a[k] * x1[k] for k in range(len(x1))]) + gamma_4 - L1Norm(model, gamma_5_1) - EPS
     return result
 
 def stl_last(swarm, a, b, x0, x0_last, e, bloat_factor, EPS=1e-1):

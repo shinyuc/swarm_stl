@@ -34,9 +34,40 @@ def noIntersection(a, b, c, d):
     # b < c or d < a
     return Disjunction([c-b-EPS, a-d-EPS])
 
+class SingleSwarm:
+    def __init__(self, id, dynamics, total_num_agents, lqr_Q_R):
+        self.id = id
+        self.num_agents = total_num_agents[id]
+        self.dynamics = dynamics
+        self.lqr_Q_R = lqr_Q_R  #[Q,R] matrix
+        self.B = cholesky_decomposition_lqr(dynamics, lqr_Q_R)
+
+def cholesky_decomposition_lqr(dynamics, lqr_Q_R = (np.eye(2), np.eye(2))):
+    A = dynamics[0]
+    B = dynamics[1]
+    Q = lqr_Q_R[0]
+    R = lqr_Q_R[1]
+    _, P, _ = ct.lqr(A, B, Q, R)
+    try:
+        B_p = np.linalg.cholesky(P)
+        return B_p
+    except np.linalg.LinAlgError:
+        print("Matrix P is not positive definite.")
+
 if __name__ == '__main__':
     a = 2
     b = 3
     c = 4
     d = 5
     print(noIntersection(a, b, c, d))
+    A = np.array([[0, 0], [0, 0]])
+    B = np.array([[1, 0], [0, 1]])
+    dynamics = [A, B]
+    total_num_agents = [2, 3, 4, 5]
+    print(dynamics[1])
+    print(total_num_agents[0])
+    Q = 0.5*np.array([[1, 0], [0, 1]])
+    R = 0.5*np.array([[1, 0], [0, 1]])
+    lqr_set = [Q, R]
+    swarm = SingleSwarm(1, dynamics, total_num_agents, lqr_set)
+    print(swarm.B)
