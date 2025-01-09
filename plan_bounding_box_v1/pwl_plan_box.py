@@ -135,19 +135,19 @@ def mu(margin, model, swarm, i, PWL, boxes, A, b):
         x0 = PWL[i][0]
         x1 = PWL[i + 1][0]
         Sigma = boxes[i + 1]
-        temp = sc.stl_waypoints(margin,model, swarm, a,b_e,x0,x1,Sigma, EPS)
+        temp = sc.stl_box(margin,model, swarm, a,b_e,x0,x1,Sigma, EPS)
         conjunctions.append(temp)
-        if i >= 1:
-            # x0_last = PWL[i-1][0]
-            Sigma_last = boxes[i]
-            temp_last = sc.stl_last(margin, swarm, a, b_e, x0, Sigma_last, Sigma, EPS)
-            conjunctions.append(temp_last[0])
-            conjunctions.append(temp_last[1])
-        if i <= len(PWL)-3:
-            Sigma_next = boxes[i+2]
-            temp_next = sc.stl_next(margin, swarm, a, b_e, x1, Sigma,Sigma_next, EPS)
-            conjunctions.append(temp_next[0])
-            conjunctions.append(temp_next[1])
+        # if i >= 1:
+        #     # x0_last = PWL[i-1][0]
+        #     Sigma_last = boxes[i]
+        #     temp_last = sc.stl_last(margin, swarm, a, b_e, x0, Sigma_last, Sigma, EPS)
+        #     conjunctions.append(temp_last[0])
+        #     conjunctions.append(temp_last[1])
+        # if i <= len(PWL)-3:
+        #     Sigma_next = boxes[i+2]
+        #     temp_next = sc.stl_next(margin, swarm, a, b_e, x1, Sigma,Sigma_next, EPS)
+        #     conjunctions.append(temp_next[0])
+        #     conjunctions.append(temp_next[1])
     return Conjunction(conjunctions)
 
 def negmu(margin, model, swarm, i, PWL, boxes, A, b):

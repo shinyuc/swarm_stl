@@ -1,7 +1,7 @@
 import numpy as np
 import control as ct
 import math
-from single_swarm import SingleSwarm
+from single_swarm_test import SingleSwarm
 
 def dynamics_equilibrium(swarm, u_eq):
     # res_1>=0 and res_2>=0 ensure the existence of equilibrium

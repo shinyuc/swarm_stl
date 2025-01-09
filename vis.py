@@ -44,7 +44,7 @@ def vis(test, swarm,boxes, limits=None, equal_aspect=True):
         plt.gca().set_aspect('equal', adjustable='box')
 
     if PWLs is None or PWLs[0] is None:
-        plt.show()
+        # plt.show()
         return
 
     if len(PWLs) <= 4:
@@ -58,4 +58,4 @@ def vis(test, swarm,boxes, limits=None, equal_aspect=True):
         ax.plot([P[0][0] for P in PWL], [P[0][1] for P in PWL], '-', color = colors[i])
         ax.plot(PWL[-1][0][0], PWL[-1][0][1], '*', color = colors[i])
         ax.plot(PWL[0][0][0], PWL[0][0][1], 'o', color = colors[i])
-    plt.show()
+    # plt.show()
