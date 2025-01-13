@@ -142,9 +142,9 @@ def mu(margin, model, swarm, i, PWL, boxes, A, b):
             temp_last = sc.stl_last(margin, swarm, a, b_e, x0, Sigma_last, Sigma, EPS)
             conjunctions.append(temp_last[0])
             conjunctions.append(temp_last[1])
-        if i <= len(PWL)-3:
-            Sigma_next = boxes[i+2]
-            temp_next = sc.stl_next(margin, swarm, a, b_e, x1, Sigma,Sigma_next, EPS)
+        if i <= len(PWL) - 3:
+            Sigma_next = boxes[i + 2]
+            temp_next = sc.stl_next(margin, swarm, a, b_e, x1, Sigma, Sigma_next, EPS)
             conjunctions.append(temp_next[0])
             conjunctions.append(temp_next[1])
     return Conjunction(conjunctions)
@@ -162,36 +162,36 @@ def negmu(margin, model, swarm, i, PWL, boxes, A, b):
         x0 = PWL[i][0]
         x1 = PWL[i + 1][0]
         Sigma = boxes[i + 1]
-        # temp = sc.neg_stl_waypoints(margin,model, swarm, a,b_e,x0,x1,Sigma, EPS)
-        # conjunctions.append(temp)
-        # if i >= 1:
-        #     Sigma_last = boxes[i]
-        #     temp_last = sc.neg_stl_last(margin, swarm, a, b_e, x0, Sigma_last, Sigma, EPS)
-        #     conjunctions.append(temp_last[0])
-        #     conjunctions.append(temp_last[1])
-        # if i <= len(PWL)-3:
-        #     Sigma_next = boxes[i+2]
-        #     temp_next = sc.neg_stl_next(margin, swarm, a, b_e, x1, Sigma,Sigma_next, EPS)
-        #     conjunctions.append(temp_next[0])
-        #     conjunctions.append(temp_next[1])
-        # disjunctions.append(Conjunction(conjunctions))
+        temp = sc.neg_stl_waypoints(margin,model, swarm, a,b_e,x0,x1,Sigma, EPS)
+        conjunctions.append(temp)
+        if i >= 1:
+            Sigma_last = boxes[i]
+            temp_last = sc.neg_stl_last(margin, swarm, a, b_e, x0, Sigma_last, Sigma, EPS)
+            conjunctions.append(temp_last[0])
+            conjunctions.append(temp_last[1])
+        if i <= len(PWL)-3:
+            Sigma_next = boxes[i+2]
+            temp_next = sc.neg_stl_next(margin, swarm, a, b_e, x1, Sigma,Sigma_next, EPS)
+            conjunctions.append(temp_next[0])
+            conjunctions.append(temp_next[1])
+        disjunctions.append(Conjunction(conjunctions))
 
-        bloat_factor = Sigma @ Sigma.T
-        gamma_4 = b - sqrt(a @ bloat_factor @ a.T)
-
-        B_p = swarm.B
-        B_p_T = B_p.T
-        inv_P = np.linalg.inv(B_p @ B_p.T)
-        gamma_5 = sqrt(a @ inv_P @ a.T)
-        gamma_5_1 = (B_p_T @ _sub(x0, x1))
-        temp1 = sum([a[k] * x0[k] for k in range(len(x0))]) - b[e] - sqrt(a @ bloat_factor @ a.T)  - margin
-        temp2 = sum([a[k] * x1[k] for k in range(len(x1))]) - b[e] - sqrt(a @ bloat_factor @ a.T)  - margin
+        # bloat_factor = Sigma @ Sigma.T
+        # gamma_4 = b - sqrt(a @ bloat_factor @ a.T)
+        #
+        # B_p = swarm.B
+        # B_p_T = B_p.T
+        # inv_P = np.linalg.inv(B_p @ B_p.T)
+        # gamma_5 = sqrt(a @ inv_P @ a.T)
+        # gamma_5_1 = (B_p_T @ _sub(x0, x1))
+        # temp1 = sum([a[k] * x0[k] for k in range(len(x0))]) - b[e] - sqrt(a @ bloat_factor @ a.T)  - margin
+        # temp2 = sum([a[k] * x1[k] for k in range(len(x1))]) - b[e] - sqrt(a @ bloat_factor @ a.T)  - margin
 
         # temp1 = sum([a[k] * x0[k] for k in range(len(x0))]) - b[e]  - sqrt(a @ bloat_factor @ a.T) - gamma_5*L1Norm(model, gamma_5_1)  - margin
         # temp2 = sum([a[k] * x1[k] for k in range(len(x1))]) - b[e]  - sqrt(a @ bloat_factor @ a.T) - gamma_5*L1Norm(model, gamma_5_1)  - margin
-        conjunctions.append(temp1)
-        conjunctions.append(temp2)
-        disjunctions.append(Conjunction(conjunctions))
+        # conjunctions.append(temp1)
+        # conjunctions.append(temp2)
+        # disjunctions.append(Conjunction(conjunctions))
     return Disjunction(disjunctions)
 
 def add_space_constraints(model, xlist, limits, bloat=0.):
@@ -259,7 +259,7 @@ def clearSpecTree(spec):
     for dep in spec.deps:
         clearSpecTree(dep)
     spec.zs = []
-
+###########################
 def handleSpecTree(boxes, margin, model,swarm,spec, PWL, bloat_factor, size):
     for dep in spec.deps:
         handleSpecTree(boxes,margin, model,swarm, dep, PWL, bloat_factor, size)
@@ -355,6 +355,7 @@ def plan_waypoints(swarm,boxes, x0s, specs, bloat, limits=None, num_segs=None, t
 
             PWL = []
             for i in range(num_segs+1):
+                # PWL.append([m.addVars(dims, lb=-GRB.INFINITY), m.addVar()])
                 PWL.append([m.addVars(dims, lb=-GRB.INFINITY), m.addVar()])
             PWLs.append(PWL)
             m.update()
@@ -379,7 +380,7 @@ def plan_waypoints(swarm,boxes, x0s, specs, bloat, limits=None, num_segs=None, t
         if tasks is not None:
             for idx_agent in range(len(tasks)):
                 for idx_task in range(len(tasks[idx_agent])):
-                    handleSpecTree(boxes,m, tasks[idx_agent][idx_task], PWLs[idx_agent], bloat, size)
+                    handleSpecTree(boxes,margin, m, swarm, tasks[idx_agent][idx_task], PWLs[idx_agent], bloat, size)
 
             conjunctions = []
             for idx_task in range(len(tasks[0])):
