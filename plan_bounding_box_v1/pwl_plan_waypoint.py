@@ -16,7 +16,7 @@ def setM(v):
     M = v
     IntFeasTol  = 1e-1 * T_MIN_SEP / M
 
-EPS = 1e-3
+EPS = 1e-2
 
 def _sub(x1, x2):
     return [x1[i] - x2[i] for i in range(len(x1))]
@@ -183,11 +183,11 @@ def negmu(margin, model, swarm, i, PWL, boxes, A, b):
         inv_P = np.linalg.inv(B_p @ B_p.T)
         gamma_5 = sqrt(a @ inv_P @ a.T)
         gamma_5_1 = (B_p_T @ _sub(x0, x1))
-        temp1 = sum([a[k] * x0[k] for k in range(len(x0))]) - b[e] - sqrt(a @ bloat_factor @ a.T)  - margin
-        temp2 = sum([a[k] * x1[k] for k in range(len(x1))]) - b[e] - sqrt(a @ bloat_factor @ a.T)  - margin
+        temp1 = sum([a[k] * x0[k] for k in range(len(x0))]) - b[e] - sqrt(a @ bloat_factor @ a.T) - EPS - margin
+        temp2 = sum([a[k] * x1[k] for k in range(len(x1))]) - b[e] - sqrt(a @ bloat_factor @ a.T) - EPS - margin
 
-        # temp1 = sum([a[k] * x0[k] for k in range(len(x0))]) - b[e]  - sqrt(a @ bloat_factor @ a.T) - gamma_5*L1Norm(model, gamma_5_1)  - margin
-        # temp2 = sum([a[k] * x1[k] for k in range(len(x1))]) - b[e]  - sqrt(a @ bloat_factor @ a.T) - gamma_5*L1Norm(model, gamma_5_1)  - margin
+        temp1 = sum([a[k] * x0[k] for k in range(len(x0))]) - b[e]  - sqrt(a @ bloat_factor @ a.T) - gamma_5*L1Norm(model, gamma_5_1) - EPS - margin
+        temp2 = sum([a[k] * x1[k] for k in range(len(x1))]) - b[e]  - sqrt(a @ bloat_factor @ a.T) - gamma_5*L1Norm(model, gamma_5_1) - EPS - margin
         conjunctions.append(temp1)
         conjunctions.append(temp2)
         disjunctions.append(Conjunction(conjunctions))
@@ -376,6 +376,7 @@ def plan_waypoints(swarm,boxes, x0s, specs, bloat, limits=None, num_segs=None, t
             # the initial constriant
             m.addConstrs(PWL[0][0][i] == x0[i] for i in range(dims))
             m.addConstr(PWL[0][1] == 0)
+
 
             if hard_goals is not None:
                 goal = hard_goals[idx_a]

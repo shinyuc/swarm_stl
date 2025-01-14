@@ -16,7 +16,8 @@ def vis_boxes(test_boxes, swarm, PWLs, limits=None, equal_aspect=True):
     _, plots, Boxes, margin = test_boxes(swarm,PWLs)
 
     print(Boxes)
-    print(f"The value of margin is: {margin}.")
+    print(f"The value of margin is: {margin[0]}.")
+    print(f"The length of box 1 is: {len(Boxes[0])}")
 
     with open('../plan_waypoints_v1/PWLs.pkl', 'wb') as file:
         pickle.dump(PWLs, file)

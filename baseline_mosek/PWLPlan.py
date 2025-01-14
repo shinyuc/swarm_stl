@@ -1,7 +1,7 @@
 import cvxpy as cp
 import numpy as np
 import time
-import mosek.fusion as mf
+# import mosek.forusion as mf
 
 M = 1e3
 # a large M causes numerical issues and make the model infeasible to Gurobi

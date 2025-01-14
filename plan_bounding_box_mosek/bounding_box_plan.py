@@ -127,7 +127,7 @@ def mu(margin, swarm, i, PWL, boxes, A, b):
     for e in range(num_edges):
         a = A[e,:]
         b_e = b[int(e)]
-        x0 = np.array([i][0])
+        x0 = np.array(PWL[i][0])
         x1 = np.array(PWL[i + 1][0])
         Sigma = boxes[0][i][0]
         # # temp = sc.stl_waypoints(margin,model, swarm, a,b_e,x0,x1,Sigma, EPS)
@@ -140,7 +140,7 @@ def mu(margin, swarm, i, PWL, boxes, A, b):
         beta_bar = (x1 - x0).T @ p @ (x1 - x0)
         gamma_4 = math.sqrt(a @ inv_P @ a.T * beta_bar)
         gamma_5 = a @ Sigma
-        result = - a @ x1  + b - gamma_4 - L1Norm(gamma_5) - margin
+        result = - a @ x1  + b_e - gamma_4 - L1Norm(gamma_5) - margin
         conjunctions.append(result)
         # if i >= 1:
         #     Sigma_last = boxes[i]
@@ -181,7 +181,7 @@ def negmu(margin, swarm, i, PWL, boxes, A, b):
         beta_bar = (x1 - x0).T @ p @ (x1 - x0)
         gamma_4 = math.sqrt(a @ inv_P @ a.T * beta_bar)
         gamma_5 = a @ Sigma
-        result = a @ x1 - b - gamma_4 - L1Norm(gamma_5) - margin
+        result = a @ x1 - b_e - gamma_4 - L1Norm(gamma_5) - margin
         conjunctions.append(result)
         # if i >= 1:
         #     Sigma_last = boxes[i]
@@ -239,7 +239,7 @@ def add_velocity_constraints(constraints, PWL, vmax=3):
         # squared_dist = sum([(x1[j]-x2[j])*(x1[j]-x2[j]) for j in range(len(x1))])
         # model.addConstr(squared_dist <= (vmax**2) * (t2 - t1) * (t2 - t1))
         L1_dist = L1Norm(_sub(x1,x2))
-        constraints+= [L1_dist <= vmax * (t2 - t1)]
+        constraints += [L1_dist <= vmax * (t2 - t1)]
 
 def disjoint_segments(constraints, seg1, seg2, bloat):
     # inter agent collision avoidance
@@ -305,7 +305,7 @@ def handleSpecTree(boxes, margin, swarm,spec, PWL, bloat_factor, size):
     else:
         raise ValueError('wrong op code')
 
-def gen_CDTree_constraints(root):
+def gen_CDTree_constraints(constraints, root):
     if not hasattr(root, 'deps'):
         return [root,]
     else:
@@ -314,7 +314,7 @@ def gen_CDTree_constraints(root):
             return root.constraints
         dep_constraints = []
         for dep in root.deps:
-            dep_constraints.append(gen_CDTree_constraints(dep))
+            dep_constraints.append(gen_CDTree_constraints(constraints, dep))
         zs = []
         for dep_con in dep_constraints:
             if isinstance(root, Disjunction):
@@ -327,7 +327,7 @@ def gen_CDTree_constraints(root):
         return root.constraints
 
 def add_CDTree_Constraints(constraints, root):
-    constrs = gen_CDTree_constraints(root)
+    constrs = gen_CDTree_constraints(constraints, root)
     for con in constrs:
         constraints += [con >= 0]
 
@@ -383,8 +383,8 @@ def plan_boxes(swarm, PWLs, boxes, x0s, specs, bloat, limits=None, num_segs=None
             # add_velocity_constraints(m, PWL, vmax=vmax)
             # add_time_constraints(m, PWL, tmax)
             # add volume constraint
-            temp = Boxes[0][0][0]
-            constraints += [cp.log_det(temp @ temp.T) >= 0.1]
+            # temp = Boxes[0][0][0]
+            # constraints += [cp.log_det(temp @ temp.T) >= 0.1]
 
             handleSpecTree(Boxes, margin, swarm, spec, PWL, bloat, size)
             add_CDTree_Constraints(constraints, spec.zs[0])
@@ -413,7 +413,7 @@ def plan_boxes(swarm, PWLs, boxes, x0s, specs, bloat, limits=None, num_segs=None
         # obj1 = LinExpr()
         obj = margin
         # m.setObjective(obj1, GRB.MAXIMIZE)
-        prob = cp.Problem(cp.Maximize(margin),
+        prob = cp.Problem(cp.Maximize(obj),
                           constraints)
 
         # m.write("test.lp")
@@ -430,7 +430,7 @@ def plan_boxes(swarm, PWLs, boxes, x0s, specs, bloat, limits=None, num_segs=None
             for Box in Boxes:
                 Box_output = []
                 for B in Box:
-                    Box_output.append([B[i][0].value for i in range(len(B))])
+                    Box_output.append([B[i].value for i in range(len(B))])
                 Boxes_output.append(Box_output)
             margin_result = margin.value
             return Boxes_output, margin_result
