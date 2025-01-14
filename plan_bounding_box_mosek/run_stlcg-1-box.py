@@ -87,7 +87,7 @@ if __name__ == '__main__':
     boxes = []
     for i in range(num_segs+1):
         boxes.append(initial_box)
-    with open('../plan_waypoints_v1/PWLs.pkl', 'rb') as file:
+    with open('PWLs.pkl', 'rb') as file:
         PWLs = pickle.load(file)
 
     print(PWLs)
