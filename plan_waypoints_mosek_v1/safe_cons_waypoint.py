@@ -4,7 +4,7 @@ import control as ct
 import math
 # from gurobipy import *
 
-# from plan_bounding_box_v1.funcs_test import bloat_factor
+# from plan_bounding_box_gurobi_v1.funcs_test import bloat_factor
 
 class SingleSwarm:
     def __init__(self, id, dynamics, total_num_agents, lqr_Q_R):

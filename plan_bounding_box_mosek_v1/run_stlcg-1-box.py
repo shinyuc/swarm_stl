@@ -1,6 +1,6 @@
 from vis_box import vis_boxes
 
-from plan_bounding_box_mosek.bounding_box_plan import plan_boxes, Node
+from plan_bounding_box_mosek_v1.bounding_box_plan import plan_boxes, Node
 from safe_cons_boxes import *
 import matplotlib.pyplot as plt
 import pickle
