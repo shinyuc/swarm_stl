@@ -1,7 +1,6 @@
 import numpy as np
 import control as ct
 import math
-from gurobipy import *
 
 
 

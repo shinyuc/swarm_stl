@@ -118,40 +118,55 @@ def release(i, a, b, zphi1s, zphi2s, PWL):
         conjunctions.append(Disjunction(disjunctions))
     return Conjunction(conjunctions)
 
-def mu(margin, swarm, i, PWL, boxes, A, b):
-    # this segment is fully contained in Ax<=b (shrinked)
-    bloat_factor = 0.01
+def display_mu(swarm, i, PWL, boxes, A, b):
     b = b.reshape(-1)
     num_edges = len(b)
     conjunctions = []
+    Sigma = np.array(boxes[0][i][0])
+    result = []
+    i = 18
+    Sigma = boxes[0][18][0].value
+    for e in range(num_edges):
+        a = A[e, :]
+        b_e = b[int(e)]
+        x0 = np.array(PWL[i][0])
+        x1 = np.array(PWL[i + 1][0])
+        B_p = swarm.B
+        p = B_p @ B_p.T
+        inv_P = np.linalg.inv(p)
+        beta_bar = (x1 - x0).T @ p @ (x1 - x0)
+        gamma_4 = math.sqrt(a @ inv_P @ a.T * beta_bar)
+        gamma_5 = a @ Sigma
+        result1 = - a @ x1 + b_e - gamma_4 - np.linalg.norm(gamma_5, ord=1)
+        result.append(result1)
+    return result
+
+def mu(margin, swarm, i, PWL, boxes, A, b):
+    # this segment is fully contained in Ax<=b (shrinked)
+    b = b.reshape(-1)
+    num_edges = len(b)
+    conjunctions = []
+    Sigma = boxes[0][i][0]
     for e in range(num_edges):
         a = A[e,:]
         b_e = b[int(e)]
         x0 = np.array(PWL[i][0])
         x1 = np.array(PWL[i + 1][0])
-        Sigma = boxes[0][i][0]
-        # # temp = sc.stl_waypoints(margin,model, swarm, a,b_e,x0,x1,Sigma, EPS)
-        # bloat_factor = Sigma @ Sigma.T
-        # gamma_4 = - math.sqrt(a @ bloat_factor @ a.T)
         B_p = swarm.B
-        B_p_T = B_p.T
         p = B_p @ B_p.T
         inv_P = np.linalg.inv(p)
         beta_bar = (x1 - x0).T @ p @ (x1 - x0)
         gamma_4 = math.sqrt(a @ inv_P @ a.T * beta_bar)
         gamma_5 = a @ Sigma
         result = - a @ x1  + b_e - gamma_4 - L1Norm(gamma_5) - margin
+        # print(["mu", i,  - a @ x1  + b_e - gamma_4 ])
+        if i == 18:
+            result = - a @ x1 + b_e - gamma_4  - L1Norm(gamma_5)  - margin
+        #     print(["mu", i, a.tolist(), b_e, x1.tolist(), gamma_4, - a @ x1  + b_e - gamma_4])
         conjunctions.append(result)
-        # if i >= 1:
-        #     Sigma_last = boxes[i]
-        #     temp_last = sc.stl_last(margin, swarm, a, b_e, x0, Sigma_last, Sigma, EPS)
-        #     conjunctions.append(temp_last[0])
-        #     conjunctions.append(temp_last[1])
-        # if i <= len(PWL) - 3:
-        #     Sigma_next = boxes[i + 2]
-        #     temp_next = sc.stl_next(margin, swarm, a, b_e, x1, Sigma, Sigma_next, EPS)
-        #     conjunctions.append(temp_next[0])
-        #     conjunctions.append(temp_next[1])
+    # if i == 18:
+    #     print(len(conjunctions))
+
     return Conjunction(conjunctions)
 
 def negmu(margin, swarm, i, PWL, boxes, A, b):
@@ -160,13 +175,15 @@ def negmu(margin, swarm, i, PWL, boxes, A, b):
     b = b.reshape(-1)
     num_edges = len(b)
     disjunctions = []
+    print(i)
+    Sigma = boxes[0][i][0]
     for e in range(num_edges):
-        conjunctions = []
         a = A[e, :]
+        conjunctions = []
         b_e = b[int(e)]
         x0 = np.array(PWL[i][0])
         x1 = np.array(PWL[i + 1][0])
-        Sigma = boxes[0][i][0]
+
         B_p = swarm.B
         p = B_p @ B_p.T
         inv_P = np.linalg.inv(p)
@@ -174,36 +191,16 @@ def negmu(margin, swarm, i, PWL, boxes, A, b):
         gamma_4 = math.sqrt(a @ inv_P @ a.T * beta_bar)
         gamma_5 = a @ Sigma
         result = a @ x1 - b_e - gamma_4 - L1Norm(gamma_5) - margin
-        # result = a @ x1 - b_e - gamma_4 - margin
+        # print(["negmu",i, a @ x1 - b_e - gamma_4])
+        if i == 18:
+            result = a @ x1 - b_e - gamma_4   - L1Norm(gamma_5) - margin
+            print(["negmu", i, a @ x1 - b_e - gamma_4])
+        #     print(['negmu', i,a,b_e, x1, a @ x1 - b_e  - gamma_4, a @ x1 - b_e ])
+            # result = margin
+            # print(['negmu_test', a @ x1 - b_e - gamma_4 - L1Norm(np.array([[0, 0], [0, 0.39104226]])).value])
+        # a @ x1 - b_e - gamma_4 - np.linalg.norm(a @ np.array([[0, 0], [0, 0.39104226]]), ord=1)
         conjunctions.append(result)
-        # if i >= 1:
-        #     Sigma_last = boxes[i]
-        #     temp_last = sc.neg_stl_last(margin, swarm, a, b_e, x0, Sigma_last, Sigma, EPS)
-        #     conjunctions.append(temp_last[0])
-        #     conjunctions.append(temp_last[1])
-        # if i <= len(PWL)-3:
-        #     Sigma_next = boxes[i+2]
-        #     temp_next = sc.neg_stl_next(margin, swarm, a, b_e, x1, Sigma,Sigma_next, EPS)
-        #     conjunctions.append(temp_next[0])
-        #     conjunctions.append(temp_next[1])
         disjunctions.append(Conjunction(conjunctions))
-
-        # bloat_factor = Sigma @ Sigma.T
-        # gamma_4 = b - sqrt(a @ bloat_factor @ a.T)
-        #
-        # B_p = swarm.B
-        # B_p_T = B_p.T
-        # inv_P = np.linalg.inv(B_p @ B_p.T)
-        # gamma_5 = sqrt(a @ inv_P @ a.T)
-        # gamma_5_1 = (B_p_T @ _sub(x0, x1))
-        # temp1 = sum([a[k] * x0[k] for k in range(len(x0))]) - b[e] - sqrt(a @ bloat_factor @ a.T)  - margin
-        # temp2 = sum([a[k] * x1[k] for k in range(len(x1))]) - b[e] - sqrt(a @ bloat_factor @ a.T)  - margin
-
-        # temp1 = sum([a[k] * x0[k] for k in range(len(x0))]) - b[e]  - sqrt(a @ bloat_factor @ a.T) - gamma_5*L1Norm(model, gamma_5_1)  - margin
-        # temp2 = sum([a[k] * x1[k] for k in range(len(x1))]) - b[e]  - sqrt(a @ bloat_factor @ a.T) - gamma_5*L1Norm(model, gamma_5_1)  - margin
-        # conjunctions.append(temp1)
-        # conjunctions.append(temp2)
-        # disjunctions.append(Conjunction(conjunctions))
     return Disjunction(disjunctions)
 
 def add_space_constraints(constraints, xlist, limits, bloat=0.):
@@ -356,6 +353,10 @@ def plan_boxes(swarm, PWLs, boxes, x0s, specs, bloat, limits=None, num_segs=None
 
             dims = len(x0)
             PWL = PWLs[idx_a]
+            # PWL = []
+            # for temp in PWL_1:
+            #     PWL.append(temp[0])
+
             Box = []
             for i in range(num_segs+1):
                 # PWL.append([m.addVars(dims, lb=-GRB.INFINITY), m.addVar()])
@@ -365,6 +366,8 @@ def plan_boxes(swarm, PWLs, boxes, x0s, specs, bloat, limits=None, num_segs=None
             # the initial constriant
             # m.addConstrs(PWL[0][0][i] == x0[i] for i in range(dims))
             # m.addConstr(PWL[0][1] == 0)
+
+            # constraints += [Box[-1][0] == np.array([[0.01, 0], [0, 0.01]])]
 
             # if hard_goals is not None:
             #     goal = hard_goals[idx_a]
@@ -419,6 +422,12 @@ def plan_boxes(swarm, PWLs, boxes, x0s, specs, bloat, limits=None, num_segs=None
             prob.solve()
             end = time.time()
             print('sovling it takes %.3f s'%(end - start))
+
+            # for i, constraint in enumerate(constraints):
+            #     lhs = constraint.expr.value  # Left-hand side of the constraint
+            #     print(f"Value of constraint {i + 1} (LHS): {lhs}")
+
+
             Boxes_output = []
             for Box in Boxes:
                 Box_output = []
@@ -426,7 +435,13 @@ def plan_boxes(swarm, PWLs, boxes, x0s, specs, bloat, limits=None, num_segs=None
                     Box_output.append([B[i].value for i in range(len(B))])
                 Boxes_output.append(Box_output)
             margin_result = margin.value
+            # A = np.array([[-1, 0], [1, 0], [0, -1], [0, 1]])
+            # b = np.array([1.5, 1.5, 1.5, 1.5], dtype=np.float64)
+            # result_temp = display_mu(swarm, 18, PWL, Boxes, A, b)
+            # print(result_temp)
+
             return Boxes_output, margin_result
+
         except Exception as e:
             print("Exception")
     return [None,]

@@ -57,7 +57,7 @@ def test():
     x0s = [x0,]
     specs = [spec,]
     goals = [goal, ]
-    PWL = plan(x0s, specs, bloat=0.05, size=0.11/2, num_segs=9, tmax=tmax, vmax=vmax, hard_goals=goals)
+    PWL = plan(x0s, specs, bloat=0.05, size=0.11/2, num_segs=19, tmax=tmax, vmax=vmax, hard_goals=goals)
 
     return x0s, plots, PWL
 
