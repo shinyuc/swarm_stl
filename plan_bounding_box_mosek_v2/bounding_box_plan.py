@@ -168,7 +168,7 @@ def mu(margin, swarm, i, PWL, boxes, A, b):
             result = - a @ x1 + b_e - gamma_4  - L1Norm(gamma_5)  - margin
         #     print(["mu", i, a.tolist(), b_e, x1.tolist(), gamma_4, - a @ x1  + b_e - gamma_4])
         conjunctions.append(result)
-        if 1<=i<= len(PWL):
+        if 1<=i<= len(PWL)-2:
             print(i)
             temp1 = cp.sigma_max(Sigma)
             result1 = - a @ x1  + b_e - temp1 * math.sqrt(a @ a.T) - epsilon_r * math.sqrt(a @ a.T) - margin
@@ -213,7 +213,7 @@ def negmu(margin, swarm, i, PWL, boxes, A, b):
             # print(['negmu_test', a @ x1 - b_e - gamma_4 - L1Norm(np.array([[0, 0], [0, 0.39104226]])).value])
         # a @ x1 - b_e - gamma_4 - np.linalg.norm(a @ np.array([[0, 0], [0, 0.39104226]]), ord=1)
         conjunctions.append(result)
-        if 1<=i<= len(PWL):
+        if 1<=i<= len(PWL)-2:
             print(i)
             temp1 = cp.sigma_max(Sigma)
             result1 =  a @ x1  - b_e - temp1 * math.sqrt(a @ a.T) - epsilon_r * math.sqrt(a @ a.T) - margin
