@@ -4,6 +4,9 @@ import cvxpy as cp
 from math import *
 import numpy as np
 import time
+
+from fontTools.misc.bezierTools import epsilon
+
 # import safe_cons_boxes as sc
 
 M = 1e3
@@ -143,6 +146,7 @@ def display_mu(swarm, i, PWL, boxes, A, b):
 
 def mu(margin, swarm, i, PWL, boxes, A, b):
     # this segment is fully contained in Ax<=b (shrinked)
+    epsilon_r = 1e-3
     b = b.reshape(-1)
     num_edges = len(b)
     conjunctions = []
@@ -164,6 +168,15 @@ def mu(margin, swarm, i, PWL, boxes, A, b):
             result = - a @ x1 + b_e - gamma_4  - L1Norm(gamma_5)  - margin
         #     print(["mu", i, a.tolist(), b_e, x1.tolist(), gamma_4, - a @ x1  + b_e - gamma_4])
         conjunctions.append(result)
+        if 1<=i<= len(PWL):
+            print(i)
+            temp1 = cp.sigma_max(Sigma)
+            result1 = - a @ x1  + b_e - temp1 * math.sqrt(a @ a.T) - epsilon_r * math.sqrt(a @ a.T) - margin
+            conjunctions.append(result1)
+            last_Sigma = boxes[0][i][0]
+            temp2 = cp.sigma_max(last_Sigma)
+            result2 = - a @ x1 + b_e - temp2 * math.sqrt(a @ a.T) - epsilon_r * math.sqrt(a @ a.T) - margin
+            conjunctions.append(result2)
     # if i == 18:
     #     print(len(conjunctions))
 
@@ -171,7 +184,7 @@ def mu(margin, swarm, i, PWL, boxes, A, b):
 
 def negmu(margin, swarm, i, PWL, boxes, A, b):
     # this segment is outside Ax<=b (bloated)
-    bloat_factor = 0.01
+    epsilon_r = 1e-3
     b = b.reshape(-1)
     num_edges = len(b)
     disjunctions = []
@@ -200,8 +213,22 @@ def negmu(margin, swarm, i, PWL, boxes, A, b):
             # print(['negmu_test', a @ x1 - b_e - gamma_4 - L1Norm(np.array([[0, 0], [0, 0.39104226]])).value])
         # a @ x1 - b_e - gamma_4 - np.linalg.norm(a @ np.array([[0, 0], [0, 0.39104226]]), ord=1)
         conjunctions.append(result)
+        if 1<=i<= len(PWL):
+            print(i)
+            temp1 = cp.sigma_max(Sigma)
+            result1 =  a @ x1  - b_e - temp1 * math.sqrt(a @ a.T) - epsilon_r * math.sqrt(a @ a.T) - margin
+            conjunctions.append(result1)
+            last_Sigma = boxes[0][i][0]
+            temp2 = cp.sigma_max(last_Sigma)
+            result2 =  a @ x1 - b_e - temp2 * math.sqrt(a @ a.T) - epsilon_r * math.sqrt(a @ a.T) - margin
+            conjunctions.append(result2)
         disjunctions.append(Conjunction(conjunctions))
     return Disjunction(disjunctions)
+
+
+def add_volume_constraints(constraints, Boxes, PWL):
+    for i in range(1, len(PWL)):
+        constraints += [cp.log_det(Boxes[0][i][0])>= 0.001]
 
 def add_space_constraints(constraints, xlist, limits, bloat=0.):
     xlim, ylim = limits
@@ -375,6 +402,9 @@ def plan_boxes(swarm, PWLs, boxes, x0s, specs, bloat, limits=None, num_segs=None
 
             # if limits is not None:
             #     add_space_constraints(m, [P[0] for P in PWL], limits)
+
+            # add volume constraints
+            add_volume_constraints(constraints, Boxes, PWL)
 
             # add_velocity_constraints(m, PWL, vmax=vmax)
             # add_time_constraints(m, PWL, tmax)
