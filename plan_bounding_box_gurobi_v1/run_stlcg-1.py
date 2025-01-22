@@ -1,13 +1,10 @@
-import sys
-import numpy as np
-from vis import vis
+from backup.vis import vis
 
 from pwl_plan_waypoint import plan_waypoints, Node
 from pwl_plan_box import plan_boxes
 from safe_cons_waypoint import *
 import matplotlib.pyplot as plt
 
-from ellipsoid_plt import plot_ellipsoid
 
 def test(swarm,boxes,num_segs=9):
     x0 = [-1., -1]

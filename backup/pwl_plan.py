@@ -1,8 +1,7 @@
 from gurobipy import *
-from math import *
 import numpy as np
 import time
-import safe_cons_v1 as sc
+from backup import safe_cons_v1 as sc
 
 M = 1e3
 # a large M causes numerical issues and make the model infeasible to Gurobi

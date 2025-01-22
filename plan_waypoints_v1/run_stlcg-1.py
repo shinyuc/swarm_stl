@@ -54,7 +54,7 @@ def test(swarm,boxes,num_segs=9):
     goal = [1,1]
 
     plots = [[[B1,], 'y'], [[B2,], 'r'], [[B3,], 'g'], [[C,], 'b'], [obs, 'k']]
-    tmax = 15.
+    tmax = 18.
     vmax = 1.
 
     notC = Node('negmu', info={'A':C[0], 'b':C[1]})
@@ -63,8 +63,8 @@ def test(swarm,boxes,num_segs=9):
     B3 = Node('mu', info={'A':B3[0], 'b':B3[1]})
     alwaysD = Node('mu', info={'A':D[0], 'b':D[1]})
 
-    phi_1 = Node('F', deps=[Node('A', deps=[B2,], info={'int':[0,0.1]}),], info={'int':[0,tmax]})
-    phi_2 = Node('F', deps=[Node('A', deps=[B3,], info={'int':[0,0.1]}),], info={'int':[0,tmax]})
+    phi_1 = Node('F', deps=[Node('A', deps=[B2,], info={'int':[0,0.5]}),], info={'int':[0,tmax]})
+    phi_2 = Node('F', deps=[Node('A', deps=[B3,], info={'int':[0,0.5]}),], info={'int':[0,tmax]})
     phi_3 = Node('A', deps=[notC,], info={'int':[0,tmax]})
     phi_4 = Node('A', deps=[alwaysD, ], info={'int': [0, tmax]})
     spec = Node('and', deps=[phi_1, phi_2, phi_3, phi_4])

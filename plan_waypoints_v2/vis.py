@@ -10,11 +10,17 @@ import matplotlib.path as mpath
 import matplotlib.lines as mlines
 import matplotlib.patches as mpatches
 from matplotlib.collections import PatchCollection
+import pickle
 
-def vis(test, swarm,boxes, limits=None, equal_aspect=True):
-    _, plots, PWLs, margin = test(swarm,boxes)
+def vis(test, time, swarm, boxes, limits=None, equal_aspect=True):
+    _, plots, PWLs, margin = test(time, swarm,boxes)
 
     print(PWLs)
+    print(f"The value of margin is: {margin}.")
+
+    with open('PWLs.pkl', 'wb') as file:
+        pickle.dump(PWLs, file)
+
     plt.rcParams["figure.figsize"] = [6.4, 6.4]
     plt.rcParams['axes.titlesize'] = 20
     fig = plt.figure()

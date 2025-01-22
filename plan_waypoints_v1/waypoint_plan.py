@@ -372,7 +372,7 @@ def plan_waypoints(swarm,boxes, x0s, specs, bloat, limits=None, num_segs=None, t
                 add_space_constraints(m, [P[0] for P in PWL], limits)
 
             add_velocity_constraints(m, PWL, vmax=vmax)
-            # add_time_constraints(m, PWL, tmax)
+            add_time_constraints(m, PWL, tmax)
 
             handleSpecTree(boxes,margin, m, swarm, spec, PWL, bloat, size)
             add_CDTree_Constraints(m, spec.zs[0])
