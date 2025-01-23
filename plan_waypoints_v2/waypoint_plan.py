@@ -4,11 +4,16 @@ import numpy as np
 import time
 import safe_cons_waypoint as sc
 
+
 M = 1e3
 # a large M causes numerical issues and make the model infeasible to Gurobi
 T_MIN_SEP = 1e-2
 # see comments in GreaterThanZero
 IntFeasTol  = 1e-1 * T_MIN_SEP / M
+
+z_con_map = {}
+def global_variable_map():
+    global z_con_map
 
 def setM(v):
     global M, IntFeasTol
@@ -306,6 +311,9 @@ def handleSpecTree(boxes, margin, model,swarm,spec, PWL, bloat_factor, size):
         raise ValueError('wrong op code')
 
 def gen_CDTree_constraints(model, root):
+    global z_con_map
+    # print(z_con_map[1])
+
     if not hasattr(root, 'deps'):
         return [root,]
     else:
@@ -319,8 +327,10 @@ def gen_CDTree_constraints(model, root):
         for dep_con in dep_constraints:
             if isinstance(root, Disjunction):
                 z = model.addVar(vtype=GRB.BINARY)
+                model.update()
                 zs.append(z)
                 dep_con = [con + M * (1 - z) for con in dep_con]
+                z_con_map[z] = dep_con
             root.constraints += dep_con
         if len(zs)>0:
             root.constraints.append(sum(zs)-1)
@@ -447,6 +457,7 @@ def plan_waypoints(time_stamps, swarm,boxes, x0s, specs, bloat, limits=None, num
                     PWL_output.append([[P[0][i].X for i in range(len(P[0]))], P[1].X])
                 PWLs_output.append(PWL_output)
             margin_result = margin.X
+            print(f"task finished{z_con_map}")
             m.dispose()
             return PWLs_output, margin_result
         except Exception as e:

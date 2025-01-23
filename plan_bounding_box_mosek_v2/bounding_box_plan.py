@@ -163,13 +163,11 @@ def mu(margin, swarm, i, PWL, boxes, A, b):
         gamma_4 = math.sqrt(a @ inv_P @ a.T * beta_bar)
         gamma_5 = a @ Sigma
         result = - a @ x1  + b_e - gamma_4 - L1Norm(gamma_5) - margin
-        # print(["mu", i,  - a @ x1  + b_e - gamma_4 ])
-        if i == 18:
-            result = - a @ x1 + b_e - gamma_4  - L1Norm(gamma_5)  - margin
-        #     print(["mu", i, a.tolist(), b_e, x1.tolist(), gamma_4, - a @ x1  + b_e - gamma_4])
+        # if i == 18:
+        #     result = - a @ x1 + b_e - gamma_4  - L1Norm(gamma_5)  - margin
         conjunctions.append(result)
         if 1<=i<= len(PWL)-2:
-            print(i)
+            # print(i)
             temp1 = cp.sigma_max(Sigma)
             result1 = - a @ x1  + b_e - temp1 * math.sqrt(a @ a.T) - epsilon_r * math.sqrt(a @ a.T) - margin
             conjunctions.append(result1)
@@ -188,7 +186,7 @@ def negmu(margin, swarm, i, PWL, boxes, A, b):
     b = b.reshape(-1)
     num_edges = len(b)
     disjunctions = []
-    print(i)
+    # print(i)
     Sigma = boxes[0][i][0]
     for e in range(num_edges):
         a = A[e, :]
@@ -204,14 +202,9 @@ def negmu(margin, swarm, i, PWL, boxes, A, b):
         gamma_4 = math.sqrt(a @ inv_P @ a.T * beta_bar)
         gamma_5 = a @ Sigma
         result = a @ x1 - b_e - gamma_4 - L1Norm(gamma_5) - margin
-        # print(["negmu",i, a @ x1 - b_e - gamma_4])
-        if i == 18:
-            result = a @ x1 - b_e - gamma_4   - L1Norm(gamma_5) - margin
-            print(["negmu", i, a @ x1 - b_e - gamma_4])
-        #     print(['negmu', i,a,b_e, x1, a @ x1 - b_e  - gamma_4, a @ x1 - b_e ])
-            # result = margin
-            # print(['negmu_test', a @ x1 - b_e - gamma_4 - L1Norm(np.array([[0, 0], [0, 0.39104226]])).value])
-        # a @ x1 - b_e - gamma_4 - np.linalg.norm(a @ np.array([[0, 0], [0, 0.39104226]]), ord=1)
+        # if i == 18:
+        #     result = a @ x1 - b_e - gamma_4   - L1Norm(gamma_5) - margin
+        #     print(["negmu", i, a @ x1 - b_e - gamma_4])
         conjunctions.append(result)
         if 1<=i<= len(PWL)-2:
             print(i)
@@ -337,6 +330,7 @@ def gen_CDTree_constraints(constraints, root):
             if isinstance(root, Disjunction):
                 z = cp.Variable(1, boolean=True)
                 zs.append(z)
+
                 dep_con = [con + M * (1 - z) for con in dep_con]
             root.constraints += dep_con
         if len(zs)>0:

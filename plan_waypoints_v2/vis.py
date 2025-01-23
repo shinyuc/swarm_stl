@@ -13,7 +13,7 @@ from matplotlib.collections import PatchCollection
 import pickle
 
 def vis(test, time, swarm, boxes, limits=None, equal_aspect=True):
-    _, plots, PWLs, margin = test(time, swarm,boxes)
+    _, plots, PWLs, margin, z_con_map = test(time, swarm,boxes)
 
     print(PWLs)
     print(f"The value of margin is: {margin}.")

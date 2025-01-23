@@ -1,5 +1,7 @@
 import sys
 import numpy as np
+
+from plan_waypoints_v2.waypoint_plan import z_con_map
 from vis import vis
 
 from waypoint_plan import plan_waypoints, Node
@@ -76,9 +78,10 @@ def test(time_stamps, swarm,boxes,num_segs=9):
     # PWL = plan(swarm, x0s, specs, bloat=0.05, size=0.11/2, num_segs=9, tmax=tmax, vmax=vmax, hard_goals=goals)
     PWL, margin = plan_waypoints(time_stamps, swarm,boxes, x0s, specs, bloat=0.05, size=0.11/2, num_segs=19, tmax=tmax, vmax=vmax, hard_goals=goals)
 
-    return x0s, plots, PWL, margin
+    return x0s, plots, PWL, margin, z_con_map
 
 if __name__ == '__main__':
+    # z_con_map = {1: [2, 3]}
     A = np.array([[0, 0], [0, 0]])
     B = np.array([[1, 0], [0, 1]])
     dynamics = [A, B]
