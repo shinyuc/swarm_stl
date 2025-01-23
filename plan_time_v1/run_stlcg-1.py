@@ -76,7 +76,7 @@ def test(initial_PWLs, swarm,boxes,num_segs=9):
     # PWL = plan(swarm, x0s, specs, bloat=0.05, size=0.11/2, num_segs=9, tmax=tmax, vmax=vmax, hard_goals=goals)
     PWL, margin = plan_waypoints(initial_PWLs, swarm,boxes, x0s, specs, bloat=0.05, size=0.11/2, num_segs=19, tmax=tmax, vmax=vmax, hard_goals=goals)
 
-    return x0s, plots, PWL, margin
+    return x0s, plots, PWL, margin, boxes
 
 if __name__ == '__main__':
     A = np.array([[0, 0], [0, 0]])
@@ -102,9 +102,12 @@ if __name__ == '__main__':
     #     temp = initial_time_stamps[-1] + 0.01
     #     initial_time_stamps.append(temp)
 
-    with open('PWLs.pkl', 'rb') as file:
-        PWLs = pickle.load(file)
+    # with open('PWLs.pkl', 'rb') as file:
+    #     PWLs = pickle.load(file)
+    with open('PWLs_output_waypoints.pkl', 'rb') as file:
+        PWLs_loaded, margin_loaded, Box_loaded = pickle.load(file)
 
+    PWLs = PWLs_loaded
     print(PWLs)
     print(PWLs[0])
     initial_PWLs = PWLs

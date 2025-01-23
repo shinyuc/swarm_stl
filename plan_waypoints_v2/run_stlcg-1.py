@@ -78,7 +78,7 @@ def test(time_stamps, swarm,boxes,num_segs=9):
     # PWL = plan(swarm, x0s, specs, bloat=0.05, size=0.11/2, num_segs=9, tmax=tmax, vmax=vmax, hard_goals=goals)
     PWL, margin = plan_waypoints(time_stamps, swarm,boxes, x0s, specs, bloat=0.05, size=0.11/2, num_segs=19, tmax=tmax, vmax=vmax, hard_goals=goals)
 
-    return x0s, plots, PWL, margin, z_con_map
+    return x0s, plots, PWL, margin, boxes
 
 if __name__ == '__main__':
     # z_con_map = {1: [2, 3]}

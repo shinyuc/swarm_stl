@@ -163,20 +163,15 @@ def mu(margin, swarm, i, PWL, boxes, A, b):
         gamma_4 = math.sqrt(a @ inv_P @ a.T * beta_bar)
         gamma_5 = a @ Sigma
         result = - a @ x1  + b_e - gamma_4 - L1Norm(gamma_5) - margin
-        # if i == 18:
-        #     result = - a @ x1 + b_e - gamma_4  - L1Norm(gamma_5)  - margin
         conjunctions.append(result)
-        if 1<=i<= len(PWL)-2:
-            # print(i)
-            temp1 = cp.sigma_max(Sigma)
-            result1 = - a @ x1  + b_e - temp1 * math.sqrt(a @ a.T) - epsilon_r * math.sqrt(a @ a.T) - margin
-            conjunctions.append(result1)
-            last_Sigma = boxes[0][i][0]
-            temp2 = cp.sigma_max(last_Sigma)
-            result2 = - a @ x1 + b_e - temp2 * math.sqrt(a @ a.T) - epsilon_r * math.sqrt(a @ a.T) - margin
-            conjunctions.append(result2)
-    # if i == 18:
-    #     print(len(conjunctions))
+        # if 1<=i<= len(PWL)-2:
+        #     temp1 = cp.sigma_max(Sigma)
+        #     result1 = - a @ x1  + b_e - temp1 * math.sqrt(a @ a.T) - epsilon_r * math.sqrt(a @ a.T) - margin
+        #     conjunctions.append(result1)
+        #     last_Sigma = boxes[0][i][0]
+        #     temp2 = cp.sigma_max(last_Sigma)
+        #     result2 = - a @ x1 + b_e - temp2 * math.sqrt(a @ a.T) - epsilon_r * math.sqrt(a @ a.T) - margin
+        #     conjunctions.append(result2)
 
     return Conjunction(conjunctions)
 
@@ -202,19 +197,16 @@ def negmu(margin, swarm, i, PWL, boxes, A, b):
         gamma_4 = math.sqrt(a @ inv_P @ a.T * beta_bar)
         gamma_5 = a @ Sigma
         result = a @ x1 - b_e - gamma_4 - L1Norm(gamma_5) - margin
-        # if i == 18:
-        #     result = a @ x1 - b_e - gamma_4   - L1Norm(gamma_5) - margin
-        #     print(["negmu", i, a @ x1 - b_e - gamma_4])
         conjunctions.append(result)
-        if 1<=i<= len(PWL)-2:
-            print(i)
-            temp1 = cp.sigma_max(Sigma)
-            result1 =  a @ x1  - b_e - temp1 * math.sqrt(a @ a.T) - epsilon_r * math.sqrt(a @ a.T) - margin
-            conjunctions.append(result1)
-            last_Sigma = boxes[0][i][0]
-            temp2 = cp.sigma_max(last_Sigma)
-            result2 =  a @ x1 - b_e - temp2 * math.sqrt(a @ a.T) - epsilon_r * math.sqrt(a @ a.T) - margin
-            conjunctions.append(result2)
+        # if 1<=i<= len(PWL)-2:
+        #     print(i)
+        #     temp1 = cp.sigma_max(Sigma)
+        #     result1 =  a @ x1  - b_e - temp1 * math.sqrt(a @ a.T) - epsilon_r * math.sqrt(a @ a.T) - margin
+        #     conjunctions.append(result1)
+        #     last_Sigma = boxes[0][i][0]
+        #     temp2 = cp.sigma_max(last_Sigma)
+        #     result2 =  a @ x1 - b_e - temp2 * math.sqrt(a @ a.T) - epsilon_r * math.sqrt(a @ a.T) - margin
+        #     conjunctions.append(result2)
         disjunctions.append(Conjunction(conjunctions))
     return Disjunction(disjunctions)
 
@@ -398,7 +390,7 @@ def plan_boxes(swarm, PWLs, boxes, x0s, specs, bloat, limits=None, num_segs=None
             #     add_space_constraints(m, [P[0] for P in PWL], limits)
 
             # add volume constraints
-            add_volume_constraints(constraints, Boxes, PWL)
+            # add_volume_constraints(constraints, Boxes, PWL)
 
             # add_velocity_constraints(m, PWL, vmax=vmax)
             # add_time_constraints(m, PWL, tmax)

@@ -13,13 +13,13 @@ from matplotlib.collections import PatchCollection
 import pickle
 
 def vis(test, initial_PWLs, swarm, boxes, limits=None, equal_aspect=True):
-    _, plots, PWLs, margin = test(initial_PWLs, swarm,boxes)
+    _, plots, PWLs, margin, boxes = test(initial_PWLs, swarm,boxes)
 
     print(PWLs)
     print(f"The value of margin is: {margin}.")
 
-    with open('PWLs.pkl', 'wb') as file:
-        pickle.dump(PWLs, file)
+    with open('PWLs_output_time.pkl', 'wb') as file:
+        pickle.dump((PWLs, margin, boxes), file)
 
     plt.rcParams["figure.figsize"] = [6.4, 6.4]
     plt.rcParams['axes.titlesize'] = 20
