@@ -83,7 +83,6 @@ def test_mu(constraints, last_margin, new_margin, swarm, i, PWL, Box, last_Box, 
                         a @ a.T) - new_margin
                     constraints += [new_result2 >= 0]
 
-
 def test_negmu(constraints, last_margin, new_margin, swarm, i, PWL, Box, last_Box, test_list):
     # print(i)
     epsilon_r = 1e-3
@@ -135,6 +134,48 @@ def test_volume_constraint(constraints, Box, i):
     new_sigma = Box[i+1][0]
     result = cp.log_det(new_sigma) + 4.5
     constraints += [result >= 0]
+
+def test_disjoint_segments(constraints, swarm, seg1, seg2, last_box1, last_box2,new_box1,new_box2, last_margin, new_margin):
+    # assuming that bloat is the error bound in two norm for one agent
+    # return 0.5 * L1Norm(model, _sub(_add(seg1[0], seg1[1]), _add(seg2[0], seg2[1]))) - 0.5 * (L1Norm(model, _sub(seg1[0], seg1[1])) + L1Norm(model, _sub(seg2[0], seg2[1]))) - 2*bloat*np.sqrt(len(seg1[0])) - EPS
+    B_p = swarm.B
+    p = B_p @ B_p.T
+    overline_beta_1 = B_p.T * np.linalg.norm(_sub(seg1[2], seg1[1]),ord=1)
+    overline_beta_2 = B_p.T * np.linalg.norm(_sub(seg2[2], seg2[1]),ord=1)
+    eigenvalues = np.linalg.eigvals(p)
+    min_eigenvalue = np.min(eigenvalues)
+    dist_bar = (1/math.sqrt(2))*np.linalg.norm(_sub(seg1[2], seg2[2]),ord=1) - overline_beta_1/math.sqrt(min_eigenvalue)-overline_beta_2/math.sqrt(min_eigenvalue)
+
+    max_singular_value_1 = np.linalg.norm(last_box1, ord=2)
+    max_singular_value_2 = np.linalg.norm(last_box2, ord=2)
+    last_result = dist_bar - max_singular_value_1 - max_singular_value_2 - last_margin
+    if last_result >= 0:
+        new_dist_bar = dist_bar
+        new_max_singular_value_1 = cp.norm(last_box1, 2)
+        new_max_singular_value_2 = cp.norm(last_box2, 2)
+        result = new_dist_bar - new_max_singular_value_1 - new_max_singular_value_2 - new_margin
+        constraints += [result >= 0]
+
+def add_mutual_clearance_constraints(constraints,swarm, PWLs,Boxes, last_Boxes, last_margin, new_margin):
+    for i in range(len(PWLs)):
+        for j in range(i+1, len(PWLs)):
+            PWL1 = PWLs[i]
+            last_Box1 = last_Boxes[i]
+            new_Box1 = Boxes[i]
+            PWL2 = PWLs[j]
+            last_Box2 = last_Boxes[j]
+            new_Box2 = Boxes[j]
+            for k in range(len(PWL1)-1):
+                for l in range(len(PWL2)-1):
+                    x11, t11 = PWL1[k]
+                    x12, t12 = PWL1[k+1]
+                    last_box1 = last_Box1[k+1]
+                    new_box1 = new_Box1[k+1]
+                    x21, t21 = PWL2[l]
+                    x22, t22 = PWL2[l+1]
+                    last_box2 = last_Box2[l+1]
+                    new_box2 = new_Box2[l+1]
+                    test_disjoint_segments(constraints,swarm, [x11, x12], [x21, x22], last_box1, last_box2,new_box1,new_box2, last_margin, new_margin)
 
 
 def optimize_boundingbox(PWLs, swarm, margin_loaded, Box_loaded, test_list, num_segs):

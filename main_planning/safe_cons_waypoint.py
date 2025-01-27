@@ -57,15 +57,18 @@ def positive_invariant_set(swarm, i, PWL, epsilon=1e-1):
     return x0, P, overline_beta
 
 def stl_waypoints(margin, model, swarm, a,b,x0,x1, Sigma, EPS=1e-1):
+    epsilon_r = 1e-3
     bloat_factor = Sigma @ Sigma.T
     gamma_4 = - math.sqrt(a @ bloat_factor @ a.T)
     B_p = swarm.B
     B_p_T = B_p.T
-    temp = B_p @ B_p.T *1.1
+    temp = B_p @ B_p.T
     inv_P = np.linalg.inv(temp)
     gamma_5 = math.sqrt(a @ inv_P @ a.T)
     gamma_5_1 = (B_p_T @ _sub(x0, x1))
-    result = - sum([a[k] * x1[k] for k in range(len(x1))]) + b + gamma_4 - gamma_5 * L1Norm(model, gamma_5_1) -margin
+    max_eigenvalue_p = np.max(np.linalg.eigvals(temp))
+    gamma_5_bloat = math.sqrt(max_eigenvalue_p) * epsilon_r
+    result = - sum([a[k] * x1[k] for k in range(len(x1))]) + b + gamma_4 - gamma_5 * (gamma_5_bloat+L1Norm(model, gamma_5_1)) -margin
     return result
 
 def stl_last(margin, swarm, a, b, x0,Sigma,Sigma_last, EPS=1e-1):
@@ -82,34 +85,36 @@ def stl_last(margin, swarm, a, b, x0,Sigma,Sigma_last, EPS=1e-1):
     result = [result1, result2]
     return result
 
-def stl_next(margin, swarm, a, b, x1, Sigma,Sigma_next, EPS=1e-1):
-    # bloat_factor denotes the margin, which is epsilon in eq(3)
-    _, S, _ = np.linalg.svd(Sigma)
-    max_singular_value = np.max(S)
-    gamma_6 = b - max_singular_value * math.sqrt(a @ a.T)
-    epsilon_r = 0.001  # bounding box size max{Sigma_1, Sigma_2}
-    result1 = - sum([a[k] * x1[k] for k in range(len(x1))]) + gamma_6 - epsilon_r * np.linalg.norm(a)-margin
-
-    _, S_next, _ = np.linalg.svd(Sigma_next)
-    max_singular_value_next = np.max(S_next)
-    gamma_6_next = b - max_singular_value_next * math.sqrt(a @ a.T)
-    result2 = - sum([a[k] * x1[k] for k in range(len(x1))]) + gamma_6_next - epsilon_r * math.sqrt(a @ a.T)-margin
-    result = [result1, result2]
-
-    return result
+# def stl_next(margin, swarm, a, b, x1, Sigma,Sigma_next, EPS=1e-1):
+#     # bloat_factor denotes the margin, which is epsilon in eq(3)
+#     _, S, _ = np.linalg.svd(Sigma)
+#     max_singular_value = np.max(S)
+#     gamma_6 = b - max_singular_value * math.sqrt(a @ a.T)
+#     epsilon_r = 0.001  # bounding box size max{Sigma_1, Sigma_2}
+#     result1 = - sum([a[k] * x1[k] for k in range(len(x1))]) + gamma_6 - epsilon_r * np.linalg.norm(a)-margin
+#
+#     _, S_next, _ = np.linalg.svd(Sigma_next)
+#     max_singular_value_next = np.max(S_next)
+#     gamma_6_next = b - max_singular_value_next * math.sqrt(a @ a.T)
+#     result2 = - sum([a[k] * x1[k] for k in range(len(x1))]) + gamma_6_next - epsilon_r * math.sqrt(a @ a.T)-margin
+#     result = [result1, result2]
+#
+#     return result
 
 def neg_stl_waypoints(margin,model, swarm, a,b_e,x0,x1,Sigma=np.array([[0.001, 0], [0, 0.001]]), EPS=1e-2):
     # Sigma = np.array([[0.001, 0], [0, 0.001]])
+    epsilon_r = 1e-3
     bloat_factor = Sigma @ Sigma.T
     gamma_4 =  - math.sqrt(a @ bloat_factor @ a.T)
     B_p = swarm.B
     B_p_T = B_p.T
-    temp = B_p @ B_p.T *1.1
+    temp = B_p @ B_p.T
     inv_P = np.linalg.inv(temp)
     gamma_5 = math.sqrt(a @ inv_P @ a.T)
     gamma_5_1 = (B_p_T @ _sub(x0, x1))
-    # result =  sum([a[k] * x1[k] for k in range(len(x1))]) - b_e + gamma_4 - gamma_5 * L1Norm(model, gamma_5_1) - margin
-    result =  sum([a[k] * x1[k] for k in range(len(x1))])-b_e + gamma_4 - gamma_5 * L1Norm(model, gamma_5_1) - margin
+    max_eigenvalue_p = np.max(np.linalg.eigvals(temp))
+    gamma_5_bloat = math.sqrt(max_eigenvalue_p) * epsilon_r
+    result =  sum([a[k] * x1[k] for k in range(len(x1))])-b_e + gamma_4 - gamma_5 * (gamma_5_bloat + L1Norm(model, gamma_5_1)) - margin
     return result
 
 def neg_stl_last(margin, swarm, a, b_e, x0, Sigma_last, Sigma, EPS=1e-2):
@@ -126,18 +131,18 @@ def neg_stl_last(margin, swarm, a, b_e, x0, Sigma_last, Sigma, EPS=1e-2):
     result = [result1, result2]
     return result
 
-def neg_stl_next(margin, swarm, a, b_e, x1, Sigma,Sigma_next, EPS=1e-2):
-    # bloat_factor denotes the margin, which is epsilon in eq(3)
-    _, S, _ = np.linalg.svd(Sigma)
-    max_singular_value = np.max(S)
-    gamma_6 = -b_e - max_singular_value * math.sqrt(a @ a.T)
-    epsilon_r = 0.001  # bounding box size max{Sigma_1, Sigma_2}
-    result1 =  sum([a[k] * x1[k] for k in range(len(x1))]) + gamma_6 - epsilon_r * np.linalg.norm(a) - margin
-
-    _, S_next, _ = np.linalg.svd(Sigma_next)
-    max_singular_value_next = np.max(S_next)
-    gamma_6_next = -b_e - max_singular_value_next * math.sqrt(a @ a.T)
-    result2 =  sum([a[k] * x1[k] for k in range(len(x1))]) + gamma_6_next - epsilon_r * math.sqrt(
-        a @ a.T) - margin
-    result = [result1, result2]
-    return result
+# def neg_stl_next(margin, swarm, a, b_e, x1, Sigma,Sigma_next, EPS=1e-2):
+#     # bloat_factor denotes the margin, which is epsilon in eq(3)
+#     _, S, _ = np.linalg.svd(Sigma)
+#     max_singular_value = np.max(S)
+#     gamma_6 = -b_e - max_singular_value * math.sqrt(a @ a.T)
+#     epsilon_r = 0.001  # bounding box size max{Sigma_1, Sigma_2}
+#     result1 =  sum([a[k] * x1[k] for k in range(len(x1))]) + gamma_6 - epsilon_r * np.linalg.norm(a) - margin
+#
+#     _, S_next, _ = np.linalg.svd(Sigma_next)
+#     max_singular_value_next = np.max(S_next)
+#     gamma_6_next = -b_e - max_singular_value_next * math.sqrt(a @ a.T)
+#     result2 =  sum([a[k] * x1[k] for k in range(len(x1))]) + gamma_6_next - epsilon_r * math.sqrt(
+#         a @ a.T) - margin
+#     result = [result1, result2]
+#     return result
