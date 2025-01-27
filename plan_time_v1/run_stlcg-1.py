@@ -1,15 +1,16 @@
 import sys
 import numpy as np
-from vis import vis
+from vis_time import vis_time
 
-from waypoint_plan import plan_waypoints, Node
-from safe_cons_waypoint import *
+from time_plan import plan_times, Node
+from safe_cons_time import *
 import matplotlib.pyplot as plt
 import pickle
 
 from ellipsoid_plt import plot_ellipsoid
 
-def test(initial_PWLs, swarm,boxes,num_segs=9):
+def test_time(initial_PWLs, swarm,boxes,num_segs=9):
+    global tmax
     x0 = [-1., -1]
 
     wall_half_width = 0.05
@@ -20,12 +21,6 @@ def test(initial_PWLs, swarm,boxes,num_segs=9):
     walls.append(np.array([1.5, 1.5, -1.5, 1.5], dtype=np.float64))
     walls.append(np.array([-1.5, 1.5, -1.5, -1.5], dtype=np.float64))
     walls.append(np.array([-1.5, 1.5, 1.5, 1.5], dtype=np.float64))
-
-
-    # walls.append(np.array([-10, -10, -10, 10], dtype = np.float64))
-    # walls.append(np.array([10, 10, -10, 10], dtype = np.float64))
-    # walls.append(np.array([-10, 10, -10, -10], dtype = np.float64))
-    # walls.append(np.array([-10, 10, 10, 10], dtype = np.float64))
 
     obs = []
     for wall in walls:
@@ -55,7 +50,7 @@ def test(initial_PWLs, swarm,boxes,num_segs=9):
     goal = [1,1]
 
     plots = [[[B1,], 'y'], [[B2,], 'r'], [[B3,], 'g'], [[C,], 'b'], [obs, 'k']]
-    tmax = 200.
+
     vmax = 1.
 
     notC = Node('negmu', info={'A':C[0], 'b':C[1]})
@@ -74,11 +69,12 @@ def test(initial_PWLs, swarm,boxes,num_segs=9):
     specs = [spec,]
     goals = [goal, ]
     # PWL = plan(swarm, x0s, specs, bloat=0.05, size=0.11/2, num_segs=9, tmax=tmax, vmax=vmax, hard_goals=goals)
-    PWL, margin = plan_waypoints(initial_PWLs, swarm,boxes, x0s, specs, bloat=0.05, size=0.11/2, num_segs=19, tmax=tmax, vmax=vmax, hard_goals=goals)
+    PWL, margin = plan_times(initial_PWLs, swarm,boxes, x0s, specs, bloat=0.05, size=0.11/2, num_segs=19, tmax=tmax, vmax=vmax, hard_goals=goals)
 
     return x0s, plots, PWL, margin, boxes
 
 if __name__ == '__main__':
+    tmax = 200
     A = np.array([[0, 0], [0, 0]])
     B = np.array([[1, 0], [0, 1]])
     dynamics = [A, B]
@@ -113,5 +109,5 @@ if __name__ == '__main__':
     initial_PWLs = PWLs
 
 
-    results = vis(test, initial_PWLs, swarm,boxes)
+    results = vis_time(test_time, initial_PWLs, swarm,boxes)
     plt.show()

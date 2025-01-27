@@ -1,7 +1,10 @@
+from fontTools.misc.bezierTools import epsilon
 from gurobipy import *
+import control as ct
+from math import *
 import numpy as np
 import time
-from backup import safe_cons_v1 as sc
+import safe_cons_time as sc
 
 M = 1e3
 # a large M causes numerical issues and make the model infeasible to Gurobi
@@ -14,7 +17,7 @@ def setM(v):
     M = v
     IntFeasTol  = 1e-1 * T_MIN_SEP / M
 
-EPS = 1e-2
+EPS = 1e-3
 
 def _sub(x1, x2):
     return [x1[i] - x2[i] for i in range(len(x1))]
@@ -122,73 +125,76 @@ def release(i, a, b, zphi1s, zphi2s, PWL):
         conjunctions.append(Disjunction(disjunctions))
     return Conjunction(conjunctions)
 
-# def mu(i, swarm, PWL, bloat_factor, A, b):
-#     bloat_factor = np.max([0, bloat_factor])
-#     # this segment is fully contained in Ax<=b (shrinked)
-#     b = b.reshape(-1)
-#     num_edges = len(b)
-#     conjunctions = []
-#     for e in range(num_edges):
-#         a = A[e,:]
-#         # for j in [i, i+1]:
-#         x0 = PWL[i][0]
-#         x1 = PWL[i+1][0]
-#         # conjunctions.append(b[e] - np.linalg.norm(a) * bloat_factor - sum([a[k]*x[k] for k in range(len(x))]) - EPS)
-#         temp = sc.stl_1(swarm, a,b,x0,x1,e,bloat_factor, EPS)
-#         conjunctions.append(temp[0])
-#         conjunctions.append(temp[1])
-#         conjunctions.append(temp[2])
-#         conjunctions.append(temp[3])
-#         if i >= 1:
-#             x0_last = PWL[i-1][0]
-#             temp_last = sc.stl_last(swarm, a, b, x0, x0_last, e, bloat_factor, EPS)
-#             conjunctions.append(temp_last)
-#         if i <= len(PWL)-2:
-#             x1_next = PWL[i+1][0]
-#             temp_next = sc.stl_next(swarm, a, b, x1, x1_next, e, bloat_factor, EPS)
-#             conjunctions.append(temp_next)
-#     return Conjunction(conjunctions)
-
-def mu(model, i, swarm, PWL, bloat_factor, A, b):
-    bloat_factor = np.max([0, bloat_factor])
-    # this segment is fully contained in Ax<=b (shrinked)
+def mu(margin, model, swarm, i, PWL, boxes, A, b):
     b = b.reshape(-1)
     num_edges = len(b)
     conjunctions = []
+    x0 = PWL[i][0]
+    x1 = PWL[i + 1][0]
+    Sigma = boxes[i + 1]
     for e in range(num_edges):
         a = A[e,:]
-        x0 = PWL[i][0]
-        x1 = PWL[i + 1][0]
-        temp = sc.stl_v2(model, swarm, a, b, x0, x1, e, bloat_factor, EPS)
+        b_e = b[int(e)]
+        # x0 = PWL[i][0]
+        # x1 = PWL[i + 1][0]
+        # Sigma = boxes[i + 1]
+        temp = sc.stl_waypoints(margin,model, swarm, a,b_e,x0,x1,Sigma, EPS)
         conjunctions.append(temp)
+        if 1 <= i <= len(PWL) - 2:
+            Sigma_last = boxes[i]
+            temp_last = sc.stl_last(margin, swarm, a, b_e, x0, Sigma_last, Sigma, EPS)
+            conjunctions.append(temp_last[0])
+            conjunctions.append(temp_last[1])
+        # if i <= len(PWL) - 3:
+        #     Sigma_next = boxes[i + 2]
+        #     temp_next = sc.stl_next(margin, swarm, a, b_e, x1, Sigma, Sigma_next, EPS)
+        #     conjunctions.append(temp_next[0])
+        #     conjunctions.append(temp_next[1])
     return Conjunction(conjunctions)
 
-def negmu(i,swarm, PWL, bloat_factor, A, b):
+def negmu(margin, model, swarm, i, PWL, boxes, A, b):
     # this segment is outside Ax<=b (bloated)
+    bloat_factor = 0.01
     b = b.reshape(-1)
     num_edges = len(b)
     disjunctions = []
     for e in range(num_edges):
         a = A[e,:]
+        b_e = b[int(e)]
         conjunctions = []
         x0 = PWL[i][0]
         x1 = PWL[i + 1][0]
-        # for j in [i, i+1]:
-        # conjunctions.append(sum([a[k]*x[k] for k in range(len(x))]) - (b[e] + np.linalg.norm(a) * bloat_factor) - EPS)
-        temp_neg = sc.neg_stl_1(swarm, a,b,x0,x1,e,bloat_factor, EPS)
-        conjunctions.append(temp_neg[0])
-        # conjunctions.append(temp_neg[1])
-        # conjunctions.append(temp_neg[2])
-        # conjunctions.append(temp_neg[3])
-        if i >= 1:
-            x0_last = PWL[i-1][0]
-            temp_neg_last = sc.neg_stl_last(swarm, a, b, x0, x0_last, e, bloat_factor, EPS)
-            conjunctions.append(temp_neg_last)
-        if i <= len(PWL)-2:
-            x1_next = PWL[i+1][0]
-            temp_neg_next = sc.neg_stl_next(swarm, a, b, x1, x1_next, e, bloat_factor, EPS)
-            conjunctions.append(temp_neg_next)
+        Sigma = boxes[i + 1]
+        temp = sc.neg_stl_waypoints(margin,model, swarm, a,b_e,x0,x1,Sigma, EPS)
+        conjunctions.append(temp)
+        if 1<=i <= len(PWL)-2:
+            Sigma_last = boxes[i]
+            temp_last = sc.neg_stl_last(margin, swarm, a, b_e, x0, Sigma_last, Sigma, EPS)
+            conjunctions.append(temp_last[0])
+            conjunctions.append(temp_last[1])
+        # if i <= len(PWL)-3:
+        #     Sigma_next = boxes[i+2]
+        #     temp_next = sc.neg_stl_next(margin, swarm, a, b_e, x1, Sigma,Sigma_next, EPS)
+        #     conjunctions.append(temp_next[0])
+        #     conjunctions.append(temp_next[1])
         disjunctions.append(Conjunction(conjunctions))
+
+        # bloat_factor = Sigma @ Sigma.T
+        # gamma_4 = b - sqrt(a @ bloat_factor @ a.T)
+        #
+        # B_p = swarm.B
+        # B_p_T = B_p.T
+        # inv_P = np.linalg.inv(B_p @ B_p.T)
+        # gamma_5 = sqrt(a @ inv_P @ a.T)
+        # gamma_5_1 = (B_p_T @ _sub(x0, x1))
+        # temp1 = sum([a[k] * x0[k] for k in range(len(x0))]) - b[e] - sqrt(a @ bloat_factor @ a.T)  - margin
+        # temp2 = sum([a[k] * x1[k] for k in range(len(x1))]) - b[e] - sqrt(a @ bloat_factor @ a.T)  - margin
+
+        # temp1 = sum([a[k] * x0[k] for k in range(len(x0))]) - b[e]  - sqrt(a @ bloat_factor @ a.T) - gamma_5*L1Norm(model, gamma_5_1)  - margin
+        # temp2 = sum([a[k] * x1[k] for k in range(len(x1))]) - b[e]  - sqrt(a @ bloat_factor @ a.T) - gamma_5*L1Norm(model, gamma_5_1)  - margin
+        # conjunctions.append(temp1)
+        # conjunctions.append(temp2)
+        # disjunctions.append(Conjunction(conjunctions))
     return Disjunction(disjunctions)
 
 def add_space_constraints(model, xlist, limits, bloat=0.):
@@ -201,23 +207,49 @@ def add_space_constraints(model, xlist, limits, bloat=0.):
 
     return None
 
-def add_time_constraints(model, PWL, tmax=None):
+def add_PWL_constraints(model, PWL, initial_PWL):
+    for i in range(len(initial_PWL)):
+        model.addConstr(PWL[i][0][0] == initial_PWL[i][0][0])
+        model.addConstr(PWL[i][0][1] == initial_PWL[i][0][1])
+
+def add_time_constraints(model,swarm, PWL, initial_PWL, tmax=None):
+    epsilon_r = 1e-3
+    model.addConstr(PWL[0][1] == 0)
     if tmax is not None:
         model.addConstr(PWL[-1][1] <= tmax - T_MIN_SEP)
 
     for i in range(len(PWL)-1):
-        x1 = PWL[i][0]
+        x1 = np.array(initial_PWL[i][0])
+        x2 = np.array(initial_PWL[i + 1][0])
         t1 = PWL[i][1]
-        x2 = PWL[i+1][0]
-        t2 = PWL[i+1][1]
-        model.addConstr(t2 - t1 >= T_MIN_SEP)
+        t2 = PWL[i + 1][1]
+        model.addConstr(t2 >= t1 + T_MIN_SEP)
+        temp = np.linalg.norm(x1-x2)+epsilon_r
+        temp1 = np.log(epsilon_r) - np.log(temp)
+        temp_A = swarm.dynamics[0]
+        temp_B = swarm.dynamics[1]
+        temp_Q = swarm.lqr_Q_R[0]
+        temp_R = swarm.lqr_Q_R[1]
+        temp_G,_,_ = ct.lqr(temp_A, temp_B, temp_Q, temp_R)
+        eigenvalues, eigenvectors = np.linalg.eig(temp_A-temp_B@temp_G)
+        max_eigenvalue = np.max(eigenvalues)
+        model.addConstr(max_eigenvalue*(t2 - t1) <= temp1)
+
+    # for i in range(len(PWL)):
+    #     x1, t1 = PWL[i]
+    #     model.addConstr(t1 == time_stamps[i])
+
+    # for i in range(len(PWL)-1):
+    #     x1, t1 = PWL[i]
+    #     x2, t2 = PWL[i+1]
+    #     # model.addConstr(t2 - t1 >= T_MIN_SEP)
+    #     model.addConstr(t2 - t1 == T_MIN_SEP)
+
 
 def add_velocity_constraints(model, PWL, vmax=3):
     for i in range(len(PWL)-1):
-        x1 = PWL[i][0]
-        t1 = PWL[i][1]
-        x2 = PWL[i+1][0]
-        t2 = PWL[i+1][1]
+        x1, t1 = PWL[i]
+        x2, t2 = PWL[i+1]
         # squared_dist = sum([(x1[j]-x2[j])*(x1[j]-x2[j]) for j in range(len(x1))])
         # model.addConstr(squared_dist <= (vmax**2) * (t2 - t1) * (t2 - t1))
         L1_dist = L1Norm(model, _sub(x1,x2))
@@ -260,18 +292,18 @@ def clearSpecTree(spec):
     for dep in spec.deps:
         clearSpecTree(dep)
     spec.zs = []
-
-def handleSpecTree(model,swarm,spec, PWL, bloat_factor, size):
+###########################
+def handleSpecTree(boxes, margin, model,swarm,spec, PWL, bloat_factor, size):
     for dep in spec.deps:
-        handleSpecTree(model,swarm, dep, PWL, bloat_factor, size)
+        handleSpecTree(boxes,margin, model,swarm, dep, PWL, bloat_factor, size)
     if len(spec.zs) == len(PWL)-1:
         return
     elif len(spec.zs) > 0:
         raise ValueError('incomplete zs')
     if spec.op == 'mu':
-        spec.zs = [mu(model, i, swarm, PWL, 0.1, spec.info['A'], spec.info['b']) for i in range(len(PWL)-1)]
+        spec.zs = [mu(margin, model, swarm, i, PWL, boxes, spec.info['A'], spec.info['b']) for i in range(len(PWL)-1)]
     elif spec.op == 'negmu':
-        spec.zs = [negmu(i,swarm, PWL, bloat_factor + size, spec.info['A'], spec.info['b']) for i in range(len(PWL)-1)]
+        spec.zs = [negmu(margin,model, swarm, i, PWL, boxes, spec.info['A'], spec.info['b']) for i in range(len(PWL)-1)]
     elif spec.op == 'and':
         spec.zs = [Conjunction([dep.zs[i] for dep in spec.deps]) for i in range(len(PWL)-1)]
     elif spec.op == 'or':
@@ -314,7 +346,7 @@ def add_CDTree_Constraints(model, root):
     for con in constrs:
         model.addConstr(con >= 0)
 
-def plan(swarm, x0s, specs, bloat, limits=None, num_segs=None, tasks=None, vmax=3., MIPGap=1e-4, max_segs=None, tmax=None, hard_goals=None, size=0.11*4/2):
+def plan_times(initial_PWLs, swarm,boxes, x0s, specs, bloat, limits=None, num_segs=None, tasks=None, vmax=3., MIPGap=1e-4, max_segs=None, tmax=None, hard_goals=None, size=0.11*4/2):
     if num_segs is None:
         min_segs = 1
         assert max_segs is not None
@@ -341,6 +373,11 @@ def plan(swarm, x0s, specs, bloat, limits=None, num_segs=None, tasks=None, vmax=
         m.setParam(GRB.Param.MIPGap, MIPGap)
         # m.setParam(GRB.Param.NonConvex, 2)
         # m.getEnv().set(GRB_IntParam_OutputFlag, 0)
+        # m.addVars(1, lb=-GRB.INFINITY)
+        margin = m.addVar(lb=-GRB.INFINITY)
+        m.update()
+        # margin = [margin[k] for k in range(len(margin))]
+        # margin = 1
 
         for idx_a in range(len(x0s)):
             x0 = x0s[idx_a]
@@ -352,31 +389,27 @@ def plan(swarm, x0s, specs, bloat, limits=None, num_segs=None, tasks=None, vmax=
             PWL = []
             for i in range(num_segs+1):
                 # PWL.append([m.addVars(dims, lb=-GRB.INFINITY), m.addVar()])
-                PWL.append([m.addVars(dims, lb=-GRB.INFINITY), m.addVar(), m.addVar()])
+                PWL.append([m.addVars(dims, lb=-GRB.INFINITY), m.addVar()])
             PWLs.append(PWL)
             m.update()
 
-            # the initial constriant
-            m.addConstrs(PWL[0][0][i] == x0[i] for i in range(dims))
-            m.addConstr(PWL[0][1] == 0)
-
-            if hard_goals is not None:
-                goal = hard_goals[idx_a]
-                m.addConstrs(PWL[-1][0][i] == goal[i] for i in range(dims))
+            # PWL constraint
+            initial_PWL = initial_PWLs[idx_a]
+            add_PWL_constraints(m, PWL, initial_PWL)
 
             if limits is not None:
                 add_space_constraints(m, [P[0] for P in PWL], limits)
 
-            add_velocity_constraints(m, PWL, vmax=vmax)
-            add_time_constraints(m, PWL, tmax)
+            # add_velocity_constraints(m, PWL, vmax=vmax)
+            add_time_constraints(m, swarm, PWL, initial_PWL, tmax)
 
-            handleSpecTree(m, swarm, spec, PWL, bloat, size)
+            handleSpecTree(boxes,margin, m, swarm, spec, PWL, bloat, size)
             add_CDTree_Constraints(m, spec.zs[0])
 
         if tasks is not None:
             for idx_agent in range(len(tasks)):
                 for idx_task in range(len(tasks[idx_agent])):
-                    handleSpecTree(m, tasks[idx_agent][idx_task], PWLs[idx_agent], bloat, size)
+                    handleSpecTree(boxes,margin, m, swarm, tasks[idx_agent][idx_task], PWLs[idx_agent], bloat, size)
 
             conjunctions = []
             for idx_task in range(len(tasks[0])):
@@ -385,11 +418,10 @@ def plan(swarm, x0s, specs, bloat, limits=None, num_segs=None, tasks=None, vmax=
             z = Conjunction(conjunctions)
             add_CDTree_Constraints(m, z)
 
-        add_mutual_clearance_constraints(m, PWLs, bloat)
-
-        # obj = sum([L1Norm(m, _sub(PWL[i][0], PWL[i+1][0])) for PWL in PWLs for i in range(len(PWL)-1)])
-        obj = sum([PWL[-1][1] for PWL in PWLs])
-        m.setObjective(obj, GRB.MINIMIZE)
+        obj1 = LinExpr()
+        obj1 += margin
+        m.setObjective(obj1, GRB.MAXIMIZE)
+        # m.update()
 
         m.write("test.lp")
         print('NumBinVars: %d'%m.getAttr('NumBinVars'))
@@ -407,8 +439,9 @@ def plan(swarm, x0s, specs, bloat, limits=None, num_segs=None, tasks=None, vmax=
                 for P in PWL:
                     PWL_output.append([[P[0][i].X for i in range(len(P[0]))], P[1].X])
                 PWLs_output.append(PWL_output)
+            margin_result = margin.X
             m.dispose()
-            return PWLs_output
+            return PWLs_output, margin_result
         except Exception as e:
             m.dispose()
     return [None,]

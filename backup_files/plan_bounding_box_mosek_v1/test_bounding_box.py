@@ -9,7 +9,7 @@
 import cvxpy as cp
 import numpy as np
 
-from gurobi_mosek_comparsion.test1 import constraints
+from backup_files.gurobi_mosek_comparsion.test1 import constraints
 
 temp = cp.Variable((2,2))
 ç = [cp.log_det(temp @ temp.T)>=0.1]

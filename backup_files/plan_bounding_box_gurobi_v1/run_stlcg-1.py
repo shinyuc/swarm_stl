@@ -1,4 +1,4 @@
-from backup.vis import vis
+from backup_files.backup.vis import vis
 
 from pwl_plan_waypoint import plan_waypoints, Node
 from pwl_plan_box import plan_boxes

@@ -3,12 +3,6 @@ import control as ct
 import math
 from gurobipy import *
 
-from plan_bounding_box_gurobi_v1.funcs_test import bloat_factor
-
-
-# from pwl_plan import *
-# PWL includes waypoint position, time stamp, bounding box A
-# PWLs = [PWL]
 class SingleSwarm:
     def __init__(self, id, dynamics, total_num_agents, lqr_Q_R):
         self.id = id
@@ -63,8 +57,6 @@ def positive_invariant_set(swarm, i, PWL, epsilon=1e-1):
     return x0, P, overline_beta
 
 def stl_waypoints(margin, model, swarm, a,b,x0,x1, Sigma, EPS=1e-1):
-    # bloat_factor denotes the margin, which is epsilon in eq(3)
-    # Sigma = np.array([[0.001, 0], [0, 0.001]])
     bloat_factor = Sigma @ Sigma.T
     gamma_4 = - math.sqrt(a @ bloat_factor @ a.T)
     B_p = swarm.B

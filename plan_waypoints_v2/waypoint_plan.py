@@ -2,7 +2,7 @@ from gurobipy import *
 from math import *
 import numpy as np
 import time
-import safe_cons_waypoint as sc
+import plan_waypoints_v2.safe_cons_waypoint as sc
 
 
 M = 1e3

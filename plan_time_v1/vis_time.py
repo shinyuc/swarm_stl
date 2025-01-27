@@ -12,8 +12,8 @@ import matplotlib.patches as mpatches
 from matplotlib.collections import PatchCollection
 import pickle
 
-def vis(test, initial_PWLs, swarm, boxes, limits=None, equal_aspect=True):
-    _, plots, PWLs, margin, boxes = test(initial_PWLs, swarm,boxes)
+def vis_time(test_time, initial_PWLs, swarm, boxes, limits=None, equal_aspect=True):
+    _, plots, PWLs, margin, boxes = test_time(initial_PWLs, swarm,boxes)
 
     print(PWLs)
     print(f"The value of margin is: {margin}.")

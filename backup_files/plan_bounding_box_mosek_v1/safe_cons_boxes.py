@@ -1,9 +1,6 @@
-import numpy as np
 import control as ct
 import math
 from gurobipy import *
-
-from plan_bounding_box_gurobi_v1.funcs_test import bloat_factor
 
 
 # from pwl_plan import *
@@ -66,13 +63,14 @@ def stl_waypoints(margin, model, swarm, a,b,x0,x1, Sigma, EPS=1e-1):
     # bloat_factor denotes the margin, which is epsilon in eq(3)
     # Sigma = np.array([[0.001, 0], [0, 0.001]])
     bloat_factor = Sigma @ Sigma.T
-    gamma_4 = b - math.sqrt(a @ bloat_factor @ a.T)
+    gamma_4 = - math.sqrt(a @ bloat_factor @ a.T)
     B_p = swarm.B
     B_p_T = B_p.T
-    inv_P = np.linalg.inv(B_p @ B_p.T)
+    temp = B_p @ B_p.T *1.1
+    inv_P = np.linalg.inv(temp)
     gamma_5 = math.sqrt(a @ inv_P @ a.T)
     gamma_5_1 = (B_p_T @ _sub(x0, x1))
-    result = - sum([a[k] * x1[k] for k in range(len(x1))]) + gamma_4 - gamma_5 * L1Norm(model, gamma_5_1) -margin
+    result = - sum([a[k] * x1[k] for k in range(len(x1))]) + b + gamma_4 - gamma_5 * L1Norm(model, gamma_5_1) -margin
     return result
 
 def stl_last(margin, swarm, a, b, x0,Sigma,Sigma_last, EPS=1e-1):
@@ -108,13 +106,15 @@ def stl_next(margin, swarm, a, b, x1, Sigma,Sigma_next, EPS=1e-1):
 def neg_stl_waypoints(margin,model, swarm, a,b_e,x0,x1,Sigma=np.array([[0.001, 0], [0, 0.001]]), EPS=1e-2):
     # Sigma = np.array([[0.001, 0], [0, 0.001]])
     bloat_factor = Sigma @ Sigma.T
-    gamma_4 = -b_e - math.sqrt(a @ bloat_factor @ a.T)
+    gamma_4 =  - math.sqrt(a @ bloat_factor @ a.T)
     B_p = swarm.B
     B_p_T = B_p.T
-    inv_P = np.linalg.inv(B_p @ B_p.T)
+    temp = B_p @ B_p.T *1.1
+    inv_P = np.linalg.inv(temp)
     gamma_5 = math.sqrt(a @ inv_P @ a.T)
     gamma_5_1 = (B_p_T @ _sub(x0, x1))
-    result =  sum([a[k] * x1[k] for k in range(len(x1))]) + gamma_4 - gamma_5*L1Norm(model, gamma_5_1) - margin
+    # result =  sum([a[k] * x1[k] for k in range(len(x1))]) - b_e + gamma_4 - gamma_5 * L1Norm(model, gamma_5_1) - margin
+    result =  sum([a[k] * x1[k] for k in range(len(x1))])-b_e + gamma_4 - gamma_5 * L1Norm(model, gamma_5_1) - margin
     return result
 
 def neg_stl_last(margin, swarm, a, b_e, x0, Sigma_last, Sigma, EPS=1e-2):

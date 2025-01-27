@@ -37,7 +37,7 @@ def L1Norm(x):
     return cp.norm(x, 1)
 
 def test_mu(constraints, last_margin, new_margin, swarm, i, PWL, Box, last_Box, test_list):
-    print(i)
+    # print(i)
     epsilon_r = 1e-3
     for test_condition in test_list:
         test_A = test_condition[0]
@@ -85,7 +85,7 @@ def test_mu(constraints, last_margin, new_margin, swarm, i, PWL, Box, last_Box, 
 
 
 def test_negmu(constraints, last_margin, new_margin, swarm, i, PWL, Box, last_Box, test_list):
-    print(i)
+    # print(i)
     epsilon_r = 1e-3
     for test_condition in test_list:
         test_A = test_condition[0]
@@ -137,6 +137,47 @@ def test_volume_constraint(constraints, Box, i):
     constraints += [result >= 0]
 
 
+def optimize_boundingbox(PWLs, swarm, margin_loaded, Box_loaded, test_list):
+    global num_segs
+
+    PWL = PWLs[0]
+    last_margin = margin_loaded
+    last_Box = Box_loaded
+
+    Boxes = []
+    constraints = []
+    new_margin = cp.Variable()
+    Box = []
+    for i in range(num_segs + 1):
+        Box.append([cp.Variable((2, 2))])
+    Boxes.append(Box)
+
+    for i in range(num_segs):
+        test_mu(constraints, last_margin, new_margin, swarm, i, PWL, Box, last_Box, test_list)
+        test_negmu(constraints, last_margin, new_margin, swarm, i, PWL, Box, last_Box, test_list)
+        test_volume_constraint(constraints, Box, i)
+
+    obj = new_margin
+    prob = cp.Problem(cp.Maximize(obj),
+                      constraints)
+    start = time.time()
+    prob.solve()
+    end = time.time()
+    print('sovling it takes %.3f s' % (end - start))
+    Boxes_output = []
+    for Box in Boxes:
+        Box_output = []
+        for B in Box:
+            Box_output.append([B[i].value for i in range(len(B))])
+        Boxes_output.append(Box_output)
+    margin_result = new_margin.value
+
+    print(Boxes_output)
+    print(margin_result)
+    with open('PWLs_output_bounding_Boxes.pkl', 'wb') as file:
+        pickle.dump((PWLs, margin_result, Boxes_output), file)
+
+
 if __name__ == "__main__":
     A = np.array([[-1, 0], [1, 0], [0, -1], [0, 1]])
     b2 = np.array([0, 0.9, 1, -0.5], dtype=np.float64)
@@ -165,9 +206,7 @@ if __name__ == "__main__":
 
     last_margin = margin_loaded
     last_Box = Box_loaded
-    # last_Box = []
-    # for i in range(len(PWL)):
-    #     last_Box.append(np.array([[0.001, 0],[0, 0.001]]))
+
 
 
     sys_A = np.array([[0, 0], [0, 0]])
@@ -182,37 +221,43 @@ if __name__ == "__main__":
     swarm = SingleSwarm(1, sys_dynamics, total_num_agents, lqr_set)
     # box = [a[k] * x1[k] for i in range(len(x1))])
     num_segs = 19
-    Boxes = []
-    constraints = []
-    new_margin = cp.Variable()
-    Box = []
-    for i in range(num_segs + 1):
-        Box.append([cp.Variable((2, 2))])
-    Boxes.append(Box)
+
+    optimize_boundingbox(PWLs, swarm, margin_loaded, Box_loaded, test_list)
 
 
-    for i in range(num_segs):
-        test_mu(constraints, last_margin, new_margin, swarm, i, PWL, Box, last_Box, test_list)
-        test_negmu(constraints, last_margin, new_margin, swarm, i, PWL, Box, last_Box, test_list)
-        test_volume_constraint(constraints, Box, i)
-        # test_negmu()
-
-
-
-    obj = new_margin
-    prob = cp.Problem(cp.Maximize(obj),
-                      constraints)
-    start = time.time()
-    prob.solve()
-    end = time.time()
-    print('sovling it takes %.3f s' % (end - start))
-    Boxes_output = []
-    for Box in Boxes:
-        Box_output = []
-        for B in Box:
-            Box_output.append([B[i].value for i in range(len(B))])
-        Boxes_output.append(Box_output)
-    margin_result = new_margin.value
-
-print(Boxes_output)
-print(margin_result)
+    # Boxes = []
+    # constraints = []
+    # new_margin = cp.Variable()
+    # Box = []
+    # for i in range(num_segs + 1):
+    #     Box.append([cp.Variable((2, 2))])
+    # Boxes.append(Box)
+    #
+    #
+    # for i in range(num_segs):
+    #     test_mu(constraints, last_margin, new_margin, swarm, i, PWL, Box, last_Box, test_list)
+    #     test_negmu(constraints, last_margin, new_margin, swarm, i, PWL, Box, last_Box, test_list)
+    #     test_volume_constraint(constraints, Box, i)
+    #
+    #
+    #
+    #
+    # obj = new_margin
+    # prob = cp.Problem(cp.Maximize(obj),
+    #                   constraints)
+    # start = time.time()
+    # prob.solve()
+    # end = time.time()
+    # print('sovling it takes %.3f s' % (end - start))
+    # Boxes_output = []
+    # for Box in Boxes:
+    #     Box_output = []
+    #     for B in Box:
+    #         Box_output.append([B[i].value for i in range(len(B))])
+    #     Boxes_output.append(Box_output)
+    # margin_result = new_margin.value
+    #
+    # print(Boxes_output)
+    # print(margin_result)
+    # with open('PWLs_output_bounding_Boxes.pkl', 'wb') as file:
+    #     pickle.dump((PWLs, margin_result, Boxes_output), file)

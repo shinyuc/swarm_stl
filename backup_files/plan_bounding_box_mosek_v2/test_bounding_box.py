@@ -8,9 +8,8 @@
 # print(PWLs[0][0])
 import cvxpy as cp
 import numpy as np
-from control import margin
 
-from gurobi_mosek_comparsion.test1 import constraints
+from backup_files.gurobi_mosek_comparsion.test1 import constraints
 
 
 def L1Norm(x):
@@ -95,7 +94,6 @@ print("Optimal margin:")
 print(margin.value)
 
 import cvxpy as cp
-import numpy as np
 
 # Dimensions of A
 n = 4

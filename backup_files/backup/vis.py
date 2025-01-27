@@ -1,26 +1,13 @@
-from gurobipy import *
 import numpy as np
-from collections import namedtuple
-import time
-import pickle
 # import pypoman as ppm
-import plot_figures as pf
+from backup_files.backup import plot_figures as pf
 import matplotlib.pyplot as plt; plt.rcdefaults()
-import matplotlib.path as mpath
-import matplotlib.lines as mlines
-import matplotlib.patches as mpatches
-from matplotlib.collections import PatchCollection
-import pickle
 
-def vis(test, time, swarm, boxes, limits=None, equal_aspect=True):
-    _, plots, PWLs, margin, boxes = test(time, swarm,boxes)
+
+def vis(test, swarm,boxes, limits=None, equal_aspect=True):
+    _, plots, PWLs, margin = test(swarm,boxes)
 
     print(PWLs)
-    print(f"The value of margin is: {margin}.")
-
-    with open('PWLs_output_waypoints.pkl', 'wb') as file:
-        pickle.dump((PWLs, margin, boxes), file)
-
     plt.rcParams["figure.figsize"] = [6.4, 6.4]
     plt.rcParams['axes.titlesize'] = 20
     fig = plt.figure()
