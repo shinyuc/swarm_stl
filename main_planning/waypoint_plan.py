@@ -216,18 +216,20 @@ def add_velocity_constraints(model, PWL, vmax=3):
 
 def disjoint_segments(model, swarm, seg1, seg2, box1, box2, margin):
     # inter agent collision avoidance
+    epsilon_r = 1e-3
     assert(len(seg1) == 2)
     assert(len(seg2) == 2)
     # assuming that bloat is the error bound in two norm for one agent
     # return 0.5 * L1Norm(model, _sub(_add(seg1[0], seg1[1]), _add(seg2[0], seg2[1]))) - 0.5 * (L1Norm(model, _sub(seg1[0], seg1[1])) + L1Norm(model, _sub(seg2[0], seg2[1]))) - 2*bloat*np.sqrt(len(seg1[0])) - EPS
     B_p = swarm.B
-    B_p_T = B_p.T
     p = B_p @ B_p.T
-    overline_beta_1 = B_p.T * L1Norm(model, _sub(seg1[2], seg1[1]))
-    overline_beta_2 = B_p.T * L1Norm(model, _sub(seg2[2], seg2[1]))
+    max_eigenvalue_p = np.max(np.linalg.eigvals(p))
+    gamma_5_bloat = math.sqrt(max_eigenvalue_p) * epsilon_r
+    overline_beta_1 =  L1Norm(model, (B_p.T @ _sub(seg1[1], seg1[0])))
+    overline_beta_2 =  L1Norm(model, (B_p.T @ _sub(seg2[1], seg2[0])))
     eigenvalues = np.linalg.eigvals(p)
     min_eigenvalue = np.min(eigenvalues)
-    dist_bar = (1/math.sqrt(2))*L1Norm(model, _sub(seg1[2], seg2[2])) - overline_beta_1/math.sqrt(min_eigenvalue)-overline_beta_2/math.sqrt(min_eigenvalue)
+    dist_bar = (1/math.sqrt(2))*L1Norm(model, _sub(seg1[1], seg2[1])) - (gamma_5_bloat + overline_beta_1)/math.sqrt(min_eigenvalue)-(gamma_5_bloat + overline_beta_2)/math.sqrt(min_eigenvalue)
     max_singular_value_1 = np.linalg.norm(box1, ord=2)
     max_singular_value_2 = np.linalg.norm(box2, ord=2)
     result = dist_bar - max_singular_value_1 - max_singular_value_2 - margin
