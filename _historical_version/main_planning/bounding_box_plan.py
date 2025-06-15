@@ -1,0 +1,309 @@
+import pickle
+import numpy as np
+import cvxpy as cp
+import math
+import control as ct
+import time
+
+
+class SingleSwarm:
+    def __init__(self, id, dynamics, total_num_agents, lqr_Q_R):
+        self.id = id
+        self.num_agents = total_num_agents[id]
+        self.dynamics = dynamics
+        self.lqr_Q_R = lqr_Q_R  #[Q,R] matrix
+        self.B = cholesky_decomposition_lqr(dynamics, lqr_Q_R)
+
+def cholesky_decomposition_lqr(dynamics, lqr_Q_R = (np.eye(2), np.eye(2))):
+    A = dynamics[0]
+    B = dynamics[1]
+    Q = lqr_Q_R[0]
+    R = lqr_Q_R[1]
+    _, P, _ = ct.lqr(A, B, Q, R)
+    try:
+        B_p = np.linalg.cholesky(P)
+        return B_p
+    except np.linalg.LinAlgError:
+        print("Matrix P is not positive definite.")
+
+def _sub(x1, x2):
+    return x1 - x2
+
+def _add(x1, x2):
+    return x1 + x2
+
+def L1Norm(x):
+    """Compute the L1 norm using cvxpy."""
+    return cp.norm(x, 1)
+
+def test_mu(constraints, last_margin, new_margin, swarm, i, PWL, Box, last_Box, test_list):
+    # print(i)
+    epsilon_r = 1e-3
+    for test_condition in test_list:
+        test_A = test_condition[0]
+        test_b = test_condition[1]
+        b = test_b.reshape(-1)
+        num_edges = len(b)
+        last_Sigma = last_Box[i+1]
+        B_p = swarm.B
+        p = B_p @ B_p.T
+        inv_P = np.linalg.inv(p)
+        for e in range(num_edges):
+            a = test_A[e, :]
+            b_e = b[int(e)]
+            x0 = np.array(PWL[i][0])
+            x1 = np.array(PWL[i + 1][0])
+            beta_bar = (x1 - x0).T @ p @ (x1 - x0)
+            gamma_4 = math.sqrt(a @ inv_P @ a.T * beta_bar)
+            gamma_5 = a @ last_Sigma
+            result = - a @ x1 + b_e - gamma_4 - np.linalg.norm(gamma_5, ord=1) - last_margin
+            new_sigma = Box[i + 1][0]
+            if result >=0:
+                new_gamma_5 = a @ new_sigma
+                new_result = - a @ x1 + b_e - gamma_4 - L1Norm(new_gamma_5) - new_margin
+                constraints += [new_result>=0]
+            if 1<=i<= len(PWL)-2:
+                _, S1, _ = np.linalg.svd(last_Sigma)
+                temp1 = S1[0]
+                result1 = - a @ x1  + b_e - temp1 * math.sqrt(a @ a.T) - epsilon_r * math.sqrt(a @ a.T) - last_margin
+                if result1 >=0:
+                    new_temp1 = cp.sigma_max(new_sigma)
+                    new_result1 = - a @ x1  + b_e - new_temp1 * math.sqrt(a @ a.T) - epsilon_r * math.sqrt(a @ a.T) - new_margin
+                    constraints += [new_result1 >= 0]
+
+                second_Sigma = last_Box[i]
+                _, S2, _ = np.linalg.svd(second_Sigma)
+                temp2 = S2[0]
+                result2 = - a @ x1 + b_e - temp2 * math.sqrt(a @ a.T) - epsilon_r * math.sqrt(a @ a.T) - last_margin
+
+                new_last_sigma = Box[i][0]
+                if result2 >=0:
+                    new_temp2 = cp.sigma_max(new_last_sigma)
+                    new_result2 = - a @ x1 + b_e - new_temp2 * math.sqrt(a @ a.T) - epsilon_r * math.sqrt(
+                        a @ a.T) - new_margin
+                    constraints += [new_result2 >= 0]
+
+def test_negmu(constraints, last_margin, new_margin, swarm, i, PWL, Box, last_Box, test_list):
+    # print(i)
+    epsilon_r = 1e-3
+    for test_condition in test_list:
+        test_A = test_condition[0]
+        test_b = test_condition[1]
+        b = test_b.reshape(-1)
+        num_edges = len(b)
+        last_Sigma = last_Box[i+1]
+        B_p = swarm.B
+        p = B_p @ B_p.T
+        inv_P = np.linalg.inv(p)
+        for e in range(num_edges):
+            a = test_A[e, :]
+            b_e = b[int(e)]
+            x0 = np.array(PWL[i][0])
+            x1 = np.array(PWL[i + 1][0])
+            beta_bar = (x1 - x0).T @ p @ (x1 - x0)
+            gamma_4 = math.sqrt(a @ inv_P @ a.T * beta_bar)
+            gamma_5 = a @ last_Sigma
+            result =  a @ x1 - b_e - gamma_4 - np.linalg.norm(gamma_5, ord=1) - last_margin
+            new_sigma = Box[i + 1][0]
+            if result >=0:
+                new_gamma_5 = a @ new_sigma
+                new_result =  a @ x1 - b_e - gamma_4 - L1Norm(new_gamma_5) - new_margin
+                constraints += [new_result>=0]
+            if 1<=i<= len(PWL)-2:
+                _, S1, _ = np.linalg.svd(last_Sigma)
+                temp1 = S1[0]
+                result1 =  a @ x1  - b_e - temp1 * math.sqrt(a @ a.T) - epsilon_r * math.sqrt(a @ a.T) - last_margin
+                if result1 >=0:
+                    new_temp1 = cp.sigma_max(new_sigma)
+                    new_result1 =  a @ x1  - b_e - new_temp1 * math.sqrt(a @ a.T) - epsilon_r * math.sqrt(a @ a.T) - new_margin
+                    constraints += [new_result1 >= 0]
+
+                second_Sigma = last_Box[i]
+                _, S2, _ = np.linalg.svd(second_Sigma)
+                temp2 = S2[0]
+                result2 =  a @ x1 - b_e - temp2 * math.sqrt(a @ a.T) - epsilon_r * math.sqrt(a @ a.T) - last_margin
+
+                new_last_sigma = Box[i][0]
+                if result2 >=0:
+                    new_temp2 = cp.sigma_max(new_last_sigma)
+                    new_result2 =  a @ x1 - b_e - new_temp2 * math.sqrt(a @ a.T) - epsilon_r * math.sqrt(
+                        a @ a.T) - new_margin
+                    constraints += [new_result2 >= 0]
+
+def test_volume_constraint(constraints, Box, i):
+    new_sigma = Box[i+1][0]
+    result = cp.log_det(new_sigma) + 4.5
+    constraints += [result >= 0]
+
+def test_disjoint_segments(constraints, swarm, seg1, seg2, last_box1, last_box2,new_box1,new_box2, last_margin, new_margin):
+    # assuming that bloat is the error bound in two norm for one agent
+    # return 0.5 * L1Norm(model, _sub(_add(seg1[0], seg1[1]), _add(seg2[0], seg2[1]))) - 0.5 * (L1Norm(model, _sub(seg1[0], seg1[1])) + L1Norm(model, _sub(seg2[0], seg2[1]))) - 2*bloat*np.sqrt(len(seg1[0])) - EPS
+    epsilon_r = 1e-3
+    B_p = swarm.B
+    p = B_p @ B_p.T
+    max_eigenvalue_p = np.max(np.linalg.eigvals(p))
+    gamma_5_bloat = math.sqrt(max_eigenvalue_p) * epsilon_r
+    overline_beta_1 =  np.linalg.norm(B_p.T *(_sub(seg1[1], seg1[0])),ord=1)
+    overline_beta_2 =  np.linalg.norm(B_p.T *(_sub(seg2[1], seg2[0])),ord=1)
+    eigenvalues = np.linalg.eigvals(p)
+    min_eigenvalue = np.min(eigenvalues)
+    dist_bar = (1/math.sqrt(2))*np.linalg.norm(_sub(seg1[1], seg2[1]),ord=1) - (gamma_5_bloat + overline_beta_1)/math.sqrt(min_eigenvalue)-(gamma_5_bloat +overline_beta_2)/math.sqrt(min_eigenvalue)
+
+    max_singular_value_1 = np.linalg.norm(last_box1, ord=2)
+    max_singular_value_2 = np.linalg.norm(last_box2, ord=2)
+    last_result = dist_bar - max_singular_value_1 - max_singular_value_2 - last_margin
+    if last_result >= 0:
+        new_dist_bar = dist_bar
+        new_max_singular_value_1 = cp.norm(last_box1, 2)
+        new_max_singular_value_2 = cp.norm(last_box2, 2)
+        result = new_dist_bar - new_max_singular_value_1 - new_max_singular_value_2 - new_margin
+        constraints += [result >= 0]
+
+def add_mutual_clearance_constraints(constraints,swarm, PWLs,Boxes, last_Boxes, last_margin, new_margin):
+    for i in range(len(PWLs)):
+        for j in range(i+1, len(PWLs)):
+            PWL1 = PWLs[i]
+            last_Box1 = last_Boxes[i]
+            new_Box1 = Boxes[i]
+            PWL2 = PWLs[j]
+            last_Box2 = last_Boxes[j]
+            new_Box2 = Boxes[j]
+            for k in range(len(PWL1)-1):
+                for l in range(len(PWL2)-1):
+                    x11, t11 = PWL1[k]
+                    x12, t12 = PWL1[k+1]
+                    last_box1 = last_Box1[k+1]
+                    new_box1 = new_Box1[k+1]
+                    x21, t21 = PWL2[l]
+                    x22, t22 = PWL2[l+1]
+                    last_box2 = last_Box2[l+1]
+                    new_box2 = new_Box2[l+1]
+                    test_disjoint_segments(constraints,swarm, [x11, x12], [x21, x22], last_box1, last_box2,new_box1,new_box2, last_margin, new_margin)
+
+
+def optimize_boundingbox(PWLs, swarm, margin_loaded, Box_loaded, test_list, num_segs):
+
+    PWL = PWLs[0]
+    last_margin = margin_loaded
+    last_Box = Box_loaded
+
+    Boxes = []
+    constraints = []
+    new_margin = cp.Variable()
+    Box = []
+    for i in range(num_segs + 1):
+        Box.append([cp.Variable((2, 2))])
+    Boxes.append(Box)
+
+    for i in range(num_segs):
+        test_mu(constraints, last_margin, new_margin, swarm, i, PWL, Box, last_Box, test_list)
+        test_negmu(constraints, last_margin, new_margin, swarm, i, PWL, Box, last_Box, test_list)
+        test_volume_constraint(constraints, Box, i)
+
+    obj = new_margin
+    prob = cp.Problem(cp.Maximize(obj),
+                      constraints)
+    start = time.time()
+    prob.solve()
+    end = time.time()
+    print('sovling it takes %.3f s' % (end - start))
+    running_time = end - start
+    Boxes_output = []
+    for Box in Boxes:
+        Box_output = []
+        for B in Box:
+            # Box_output.append([np.array(B[i].value) for i in range(len(B))])
+            Box_output.append([B[i].value for i in range(len(B))])
+        Boxes_output.append(Box_output)
+    margin_result = new_margin.value
+
+    print(Boxes_output)
+    print(margin_result)
+    with open('PWLs_output_bounding_Boxes.pkl', 'wb') as file:
+        pickle.dump((PWLs, margin_result, Boxes_output), file)
+
+    return running_time, margin_result
+
+if __name__ == "__main__":
+    A = np.array([[-1, 0], [1, 0], [0, -1], [0, 1]])
+    b2 = np.array([0, 0.9, 1, -0.5], dtype=np.float64)
+    B2 = (A, b2)
+    b3 = np.array([-0.2, 0.7, -0.8, 1.2], dtype=np.float64)
+    B3 = (A, b3)
+    C = np.array([0.4, 0.4, 0.4, 0.4], dtype=np.float64)
+    C = (A, C)
+    # inside the wall
+    D = np.array([1.5, 1.5, 1.5, 1.5], dtype=np.float64)
+    # D = np.array([2, 2, 2, 2], dtype=np.float64)
+    D = (A, D)
+    test_list = [B2, B3, C, D]
+
+
+
+    with open('PWLs.pkl', 'rb') as file:
+        PWLs = pickle.load(file)
+
+    print(PWLs)
+    PWL = PWLs[0]
+    print(PWL)
+
+    with open('PWLs_output_time.pkl', 'rb') as file:
+        PWLs_loaded, margin_loaded, Box_loaded = pickle.load(file)
+
+    last_margin = margin_loaded
+    last_Box = Box_loaded
+
+
+
+    sys_A = np.array([[0, 0], [0, 0]])
+    sys_B = np.array([[1, 0], [0, 1]])
+    sys_dynamics = [sys_A, sys_B]
+    total_num_agents = [2, 3, 4, 5]
+    print(sys_dynamics[1])
+    print(total_num_agents[0])
+    Q = np.array([[1, 0], [0, 1]])
+    R = np.array([[1, 0], [0, 1]])
+    lqr_set = [Q, R]
+    swarm = SingleSwarm(1, sys_dynamics, total_num_agents, lqr_set)
+    # box = [a[k] * x1[k] for i in range(len(x1))])
+    num_segs = 19
+
+    optimize_boundingbox(PWLs, swarm, margin_loaded, Box_loaded, test_list, num_segs)
+
+
+    # Boxes = []
+    # constraints = []
+    # new_margin = cp.Variable()
+    # Box = []
+    # for i in range(num_segs + 1):
+    #     Box.append([cp.Variable((2, 2))])
+    # Boxes.append(Box)
+    #
+    #
+    # for i in range(num_segs):
+    #     test_mu(constraints, last_margin, new_margin, swarm, i, PWL, Box, last_Box, test_list)
+    #     test_negmu(constraints, last_margin, new_margin, swarm, i, PWL, Box, last_Box, test_list)
+    #     test_volume_constraint(constraints, Box, i)
+    #
+    #
+    #
+    #
+    # obj = new_margin
+    # prob = cp.Problem(cp.Maximize(obj),
+    #                   constraints)
+    # start = time.time()
+    # prob.solve()
+    # end = time.time()
+    # print('sovling it takes %.3f s' % (end - start))
+    # Boxes_output = []
+    # for Box in Boxes:
+    #     Box_output = []
+    #     for B in Box:
+    #         Box_output.append([B[i].value for i in range(len(B))])
+    #     Boxes_output.append(Box_output)
+    # margin_result = new_margin.value
+    #
+    # print(Boxes_output)
+    # print(margin_result)
+    # with open('PWLs_output_bounding_Boxes.pkl', 'wb') as file:
+    #     pickle.dump((PWLs, margin_result, Boxes_output), file)

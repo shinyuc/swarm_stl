@@ -1,0 +1,124 @@
+from vis_box import vis_boxes
+from historical_version.backup_files.plan_bounding_box_mosek_v2.bounding_box_plan import plan_boxes, Node
+# from safe_cons_boxes import *
+import matplotlib.pyplot as plt
+import pickle
+import numpy as np
+import control as ct
+
+class SingleSwarm:
+    def __init__(self, id, dynamics, total_num_agents, lqr_Q_R):
+        self.id = id
+        self.num_agents = total_num_agents[id]
+        self.dynamics = dynamics
+        self.lqr_Q_R = lqr_Q_R  #[Q,R] matrix
+        self.B = cholesky_decomposition_lqr(dynamics, lqr_Q_R)
+
+def cholesky_decomposition_lqr(dynamics, lqr_Q_R = (np.eye(2), np.eye(2))):
+    A = dynamics[0]
+    B = dynamics[1]
+    Q = lqr_Q_R[0]
+    R = lqr_Q_R[1]
+    _, P, _ = ct.lqr(A, B, Q, R)
+    try:
+        B_p = np.linalg.cholesky(P)
+        return B_p
+    except np.linalg.LinAlgError:
+        print("Matrix P is not positive definite.")
+
+
+def test_boxes(swarm,PWLs,num_segs=9):
+    x0 = [-1., -1]
+
+    wall_half_width = 0.05
+    A = np.array([[-1, 0], [1, 0], [0, -1], [0, 1]])
+    walls = []
+
+    walls.append(np.array([-1.5, -1.5, -1.5, 1.5], dtype=np.float64))
+    walls.append(np.array([1.5, 1.5, -1.5, 1.5], dtype=np.float64))
+    walls.append(np.array([-1.5, 1.5, -1.5, -1.5], dtype=np.float64))
+    walls.append(np.array([-1.5, 1.5, 1.5, 1.5], dtype=np.float64))
+
+    obs = []
+    for wall in walls:
+        if wall[0]==wall[1]:
+            wall[0] -= wall_half_width
+            wall[1] += wall_half_width
+        elif wall[2]==wall[3]:
+            wall[2] -= wall_half_width
+            wall[3] += wall_half_width
+        else:
+            raise ValueError('wrong shape for axis-aligned wall')
+        wall *= np.array([-1,1,-1,1])
+        obs.append((A, wall))
+
+    b1 = np.array([1, -0.7, 0.25, 0.5], dtype = np.float64)
+    B1 = (A, b1)
+    b2 = np.array([0, 0.9, 1, -0.5], dtype = np.float64)
+    B2 = (A, b2)
+    b3 = np.array([-0.2, 0.7, -0.8, 1.2], dtype = np.float64)
+    B3 = (A, b3)
+    C = np.array([0.4, 0.4, 0.4, 0.4], dtype = np.float64)
+    C = (A, C)
+    # inside the wall
+    D = np.array([1.5, 1.5, 1.5, 1.5], dtype=np.float64)
+    # D = np.array([2, 2, 2, 2], dtype=np.float64)
+    D = (A, D)
+
+    goal = [1,1]
+
+    plots = [[[B1,], 'y'], [[B2,], 'r'], [[B3,], 'g'], [[C,], 'b'], [obs, 'k']]
+    tmax = 18.
+    vmax = 1.
+
+    notC = Node('negmu', info={'A':C[0], 'b':C[1]})
+    B1 = Node('mu', info={'A':B1[0], 'b':B1[1]})
+    B2 = Node('mu', info={'A':B2[0], 'b':B2[1]})
+    B3 = Node('mu', info={'A':B3[0], 'b':B3[1]})
+    alwaysD = Node('mu', info={'A':D[0], 'b':D[1]})
+
+    phi_1 = Node('F', deps=[Node('A', deps=[B2,], info={'int':[0,0.1]}),], info={'int':[0,tmax]})
+    phi_2 = Node('F', deps=[Node('A', deps=[B3,], info={'int':[0,0.1]}),], info={'int':[0,tmax]})
+    phi_3 = Node('A', deps=[notC,], info={'int':[0,tmax]})
+    phi_4 = Node('A', deps=[alwaysD, ], info={'int': [0, tmax]})
+    spec = Node('and', deps=[phi_1, phi_2, phi_4, phi_3 ])
+
+
+    x0s = [x0,]
+    specs = [spec,]
+    goals = [goal, ]
+    # PWL = plan(swarm, x0s, specs, bloat=0.05, size=0.11/2, num_segs=9, tmax=tmax, vmax=vmax, hard_goals=goals)
+    Boxes, margin = plan_boxes(swarm, PWLs, boxes, x0s, specs, bloat=0.05, size=0.11/2, num_segs=19, tmax=tmax, vmax=vmax, hard_goals=goals)
+
+    return x0s, plots, Boxes, margin
+
+if __name__ == '__main__':
+    sys_A = np.array([[0, 0], [0, 0]])
+    sys_B = np.array([[1, 0], [0, 1]])
+    sys_dynamics = [sys_A, sys_B]
+    total_num_agents = [2, 3, 4, 5]
+    print(sys_dynamics[1])
+    print(total_num_agents[0])
+    Q = np.array([[1, 0], [0, 1]])
+    R = np.array([[1, 0], [0, 1]])
+    lqr_set = [Q, R]
+    swarm = SingleSwarm(1, sys_dynamics, total_num_agents, lqr_set)
+    # box = [a[k] * x1[k] for i in range(len(x1))])
+    num_segs = 19
+    # Note: Sigma of bounding box = box@box.T
+    initial_box = np.array([[0.001, 0], [0, 0.001]])
+    boxes = []
+    # for i in range(num_segs+1):
+    #     boxes.append(initial_box)
+    with open('PWLs.pkl', 'rb') as file:
+        PWLs = pickle.load(file)
+
+    print(PWLs)
+    print(PWLs[0])
+    PWLs[0][-1][1] = PWLs[0][-2][1] + 0.3
+    print(PWLs[0])
+
+
+    results = vis_boxes(test_boxes, swarm, PWLs)
+
+    plt.show()
